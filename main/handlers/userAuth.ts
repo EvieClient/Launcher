@@ -71,6 +71,7 @@ async function storeAccountToken(account: Account) {
 
   // create the accountinfo.private file if it doesn't exist
   if (!fs.existsSync(`${EvieDir}/accountinfo.private`)) {
+    await account.getProfile();
     fs.writeFileSync(
       `${EvieDir}/accountinfo.private`,
       JSON.stringify({

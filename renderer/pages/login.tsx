@@ -9,12 +9,6 @@ import { useRouter } from "next/dist/client/router";
 import electron from "electron";
 
 function Login() {
-  const router = useRouter();
-  const ipcRenderer = electron.ipcRenderer;
-
-  ipcRenderer.on("signedin", (event, code) => {
-    router.push("/home");
-  });
   return (
     <React.Fragment>
       <Head>

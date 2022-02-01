@@ -1,0 +1,11 @@
+appId: com.tristancamejo.evielauncher
+productName: Evie Client
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - from: .
+    filter:
+      - package.json
+      - app
+publish: null

@@ -21,6 +21,7 @@
     "@xmcl/text-component": "^2.1.1",
     "@xmcl/user": "^2.1.7",
     "axios": "^0.25.0",
+    "bulma": "^0.9.3",
     "electron-serve": "^1.1.0",
     "electron-store": "^8.0.1",
     "firebase": "^9.6.5",

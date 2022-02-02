@@ -15,7 +15,8 @@ import {
 import { app } from "electron";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
 import { ChildProcess } from "node:child_process";
-import * as fs from "fs";
+import fs from "fs";
+const fsPromises = fs.promises;
 import * as unzipper from "unzipper";
 import axios, { AxiosError } from "axios";
 import { getAccountGameProfile, getAccountToken } from "./userAuth";
@@ -27,7 +28,6 @@ const javaLocation = `${app.getPath("appData")}/.evieclient/java/`;
 const jreLegacy = `${app.getPath(
   "appData"
 )}/.evieclient/java/jre-legacy/bin/java.exe`;
-const forgeVersion = `1.8.9-forge1.8.9-11.15.1.2318-1.8.9`;
 
 async function Launch() {
   /*
@@ -46,8 +46,8 @@ async function Launch() {
    * Verify Versions Needed
    */
   console.log("Updating EvieClient");
-  await DownloadForgeLoader();
   await VerifyVersionExists("1.8.9");
+  await UpdateEvieClient();
 
   console.log("Game is installed, launching...");
   // launch game
@@ -92,12 +92,70 @@ async function DownloadVersion(versionId: string) {
   return true;
 }
 
-async function DownloadForgeLoader() {
+async function UpdateEvieClient() {
   try {
-    await installForge(
-      { version: "11.15.1.2318", mcversion: "1.8.9" },
-      EvieClient
-    );
+    // if the folder EvieClient/versions/EvieClient does not exist, download the version
+    if (!fs.existsSync(`${EvieClient}/versions/EvieClient`)) {
+      console.log("EvieClient is not installed, downloading...");
+      fs.mkdirSync(`${EvieClient}/versions/EvieClient`);
+    }
+    console.log("EvieClient is installed, updating...");
+    const storage = getStorage();
+    getDownloadURL(ref(storage, "1.8/EvieClient.jar")).then(async (url) => {
+      await axios
+        .get(url, { responseType: "stream" })
+        .then(async (response) => {
+          // save file in EvieClient/versions/EvieClient
+          await response.data.pipe(
+            fs.createWriteStream(
+              `${EvieClient}/versions/EvieClient/EvieClient.jar`
+            )
+          );
+        })
+        .catch((error: AxiosError) => {
+          console.log(error);
+        });
+    });
+
+    // unzip EvieClient/versions/1.8.9/1.8.9.jar and EvieClient/versions/EvieClient/EvieClient.jar
+    // then move the unzipped files to EvieClient/temp/BuildData/
+    // then zip the files in EvieClient/temp/BuildData/ and move them to EvieClient/versions/1.8.9/EvieClient.jar
+    // then delete EvieClient/temp/BuildData/
+
+    // if the folder EvieClient/versions/EvieClient/temp does not exist, create it
+    if (!fs.existsSync(`${EvieClient}/versions/EvieClient/temp`)) {
+      fs.mkdirSync(`${EvieClient}/versions/EvieClient/temp`);
+    }
+
+    // if the folder EvieClient/versions/EvieClient/temp/BuildData does not exist, create it
+    if (!fs.existsSync(`${EvieClient}/versions/EvieClient/temp/BuildData`)) {
+      fs.mkdirSync(`${EvieClient}/versions/EvieClient/temp/BuildData`);
+    }
+
+    // unzip EvieClient/versions/EvieClient/EvieClient.jar to EvieClient/versions/EvieClient/temp/
+    fs.createReadStream(`${EvieClient}/versions/EvieClient/EvieClient.jar`)
+      .pipe(
+        unzipper.Extract({
+          path: `${EvieClient}/versions/EvieClient/temp/BuildData`,
+        })
+      )
+      .promise()
+      .then(async () => {
+        // move the unzipped files to EvieClient/versions/EvieClient/temp/BuildData/
+        // every file in EvieClient/versions/EvieClient/temp/BuildData/
+        for (let file of fs.readdirSync(
+          `${EvieClient}/versions/EvieClient/temp/BuildData`
+        )) {
+          // move the file to EvieClient/versions/EvieClient/temp/BuildData/
+          fs.renameSync(
+            `${EvieClient}/versions/EvieClient/temp/BuildData/${file}`,
+            `${EvieClient}/versions/EvieClient/temp/BuildData/${file.replace(
+              "EvieClient",
+              "EvieClient-1.8.9"
+            )}`
+          );
+        }
+      });
   } catch (error) {
     console.log(error);
     return false;

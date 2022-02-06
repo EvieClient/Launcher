@@ -1,29 +1,35 @@
 import {
   getVersionList,
   install,
-  installDependencies,
   installForge,
   MinecraftVersion,
+  installDependencies,
 } from "@xmcl/installer";
 import {
   MinecraftLocation,
-  launch,
   LaunchOption,
   Version,
+  launch,
   ResolvedVersion,
 } from "@xmcl/core";
+import crypto from "crypto";
+import unzip from "unzip";
+import sevenBin from "7zip-bin";
+import { extractFull, add } from "node-7z";
 import { app } from "electron";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
 import { ChildProcess } from "node:child_process";
 import fs from "fs";
 const fsPromises = fs.promises;
-import * as unzipper from "unzipper";
 import axios, { AxiosError } from "axios";
 import { getAccountGameProfile, getAccountToken } from "./userAuth";
+
 /*
  * Global Variables
  */
-const EvieClient = `${app.getPath("appData")}/.evieclient/game`;
+const pathTo7zip = sevenBin.path7za;
+const EvieClient = `${app.getPath("appData")}/.evieclient`;
+const _Minecraft = `${app.getPath("appData")}/.minecraft`;
 const javaLocation = `${app.getPath("appData")}/.evieclient/java/`;
 const jreLegacy = `${app.getPath(
   "appData"
@@ -43,21 +49,57 @@ async function Launch() {
     }
   }
   /*
+   * Check if .minecraft folder exists
+   */
+  if (!fs.existsSync(_Minecraft)) {
+    console.log("Minecraft folder does not exist, creating...");
+    try {
+      await fsPromises.mkdir(_Minecraft, { recursive: true });
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+  }
+  /*
+   * Check if Evie temp folder exists
+   */
+  if (!fs.existsSync(`${EvieClient}/temp`)) {
+    console.log("Evie temp folder does not exist, creating...");
+    try {
+      await fsPromises.mkdir(`${EvieClient}/temp`, { recursive: true });
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+  }
+  /*
+   * Check if Evie build folder exists
+   */
+  if (!fs.existsSync(`${EvieClient}/build`)) {
+    console.log("Evie build folder does not exist, creating...");
+    try {
+      await fsPromises.mkdir(`${EvieClient}/build`, { recursive: true });
+    } catch (error) {
+      console.log(error);
+      return;
+    }
+  }
+  /*
    * Verify Versions Needed
    */
   console.log("Updating EvieClient");
-  await VerifyVersionExists("1.8.9");
-  await UpdateEvieClient();
+  //await VerifyVersionExists("1.8.9");
+  //await UpdateEvieClient();
 
   console.log("Game is installed, launching...");
-  // launch game
+
   PlayGame();
 }
 
 async function VerifyVersionExists(version: string) {
   try {
     // first check to see if the folder and json file exists
-    if (!fs.existsSync(`${EvieClient}/versions/${version}`)) {
+    if (!fs.existsSync(`${EvieClient}/build/versions/${version}`)) {
       // if it doesn't, download the version
       console.log(`${version} is not installed, downloading...`);
       await DownloadVersion(version);
@@ -65,7 +107,7 @@ async function VerifyVersionExists(version: string) {
       // if it does, check to see if the json file is up to date
       console.log(`${version} is installed, checking for updates...`);
       const resolvedVersion: ResolvedVersion = await Version.parse(
-        EvieClient,
+        `${EvieClient}/build`,
         version
       );
       await installDependencies(resolvedVersion);
@@ -84,7 +126,7 @@ async function DownloadVersion(versionId: string) {
     const aVersion: MinecraftVersion = list.find(
       (version: MinecraftVersion) => version.id === versionId
     );
-    await install(aVersion, EvieClient);
+    await install(aVersion, `${EvieClient}/build`);
   } catch (error) {
     console.log(error);
     return false;
@@ -94,81 +136,139 @@ async function DownloadVersion(versionId: string) {
 
 async function UpdateEvieClient() {
   try {
-    // if the folder EvieClient/versions/EvieClient does not exist, download the version
-    if (!fs.existsSync(`${EvieClient}/versions/EvieClient`)) {
-      console.log("EvieClient is not installed, downloading...");
-      fs.mkdirSync(`${EvieClient}/versions/EvieClient`);
-    }
-    console.log("EvieClient is installed, updating...");
-    const storage = getStorage();
-    getDownloadURL(ref(storage, "1.8/EvieClient.jar")).then(async (url) => {
-      await axios
-        .get(url, { responseType: "stream" })
-        .then(async (response) => {
-          // save file in EvieClient/versions/EvieClient
-          await response.data.pipe(
-            fs.createWriteStream(
-              `${EvieClient}/versions/EvieClient/EvieClient.jar`
-            )
+    // wrap everything in a promise
+    const update = new Promise<void>(async (resolve, reject) => {
+      console.log("Downloading Evie Patch...");
+      const storage = getStorage();
+      await getDownloadURL(ref(storage, "1.8/EvieClient.jar")).then(
+        async (url) => {
+          await axios
+            .get(url, { responseType: "stream" })
+            .then(async (response) => {
+              await response.data.pipe(
+                fs.createWriteStream(`${EvieClient}/temp/patch.jar`)
+              );
+            })
+            .catch((error: AxiosError) => {
+              console.log(error);
+            });
+        }
+      );
+
+      /*
+       * To compile the EvieClient jar, we need to merge the patch.jar with the 1.8.9 jar,
+       * Start by unzipping the 1.8.9 jar to a temp folder and then unzipping the patch.jar to a temp folder as well
+       * Then we need to merge the two jars together
+       */
+      console.log("Unzipping 1.8.9 jar...");
+      const patch = `${EvieClient}/temp/patch.jar`;
+      const minecraft = `${_Minecraft}/versions/1.8.9/1.8.9.jar`;
+      console.log("Unzipping patch.jar...");
+      extractFull(minecraft, `${EvieClient}/temp`, {
+        $bin: pathTo7zip,
+      })
+        .on("progress", (progress) => {
+          console.log(
+            `1.8.9 Class Files Extracted ${Math.round(
+              (progress.percent / 100) * 100
+            )}%`
           );
         })
-        .catch((error: AxiosError) => {
-          console.log(error);
+        .on("end", async () => {
+          console.log("Merging patch.jar with 1.8.9 jar...");
+          extractFull(patch, `${EvieClient}/temp`, {
+            $bin: pathTo7zip,
+          })
+            .on("progress", (progress) => {
+              console.log(
+                `EvieClient Patch Class Files Extracted ${Math.round(
+                  (progress.percent / 100) * 100
+                )}%`
+              );
+            })
+            .on("end", async () => {
+              console.log("Compiling EvieClient...");
+              console.log("Deleteing patch.jar...");
+              await fsPromises.unlink(`${EvieClient}/temp/patch.jar`);
+              console.log("Copying class files...");
+              add(`${EvieClient}/build/EvieClient.jar`, `${EvieClient}/temp/`, {
+                $bin: pathTo7zip,
+              }).on("end", async () => {
+                /*
+                 * After the patch.jar is merged with the 1.8.9 jar, setup the EvieClient folder
+                 */
+                console.log("Setting up EvieClient folder...");
+                await fsPromises.mkdir(`${EvieClient}/build/versions/1.8.9`, {
+                  recursive: true,
+                });
+                /*
+                 * Grab the 1.8.9.json file and copy it to the build folder
+                 */
+                console.log("Copying 1.8.9.json to build folder...");
+                await fsPromises.copyFile(
+                  `${_Minecraft}/versions/1.8.9/1.8.9.json`,
+                  `${EvieClient}/build/versions/1.8.9/1.8.9.json`
+                );
+                console.log("Copying EvieClient.jar to build folder...");
+                /*
+                 * Move EvieClient.jar to 1.8.9.jar
+                 */
+                console.log("Moving EvieClient.jar to 1.8.9.jar...");
+                await fsPromises.rename(
+                  `${EvieClient}/build/EvieClient.jar`,
+                  `${EvieClient}/build/versions/1.8.9/1.8.9.jar`
+                );
+                /*
+                 * Remove sha1 key from 1.8.9.json as we just mixed the two jars together
+                 */
+                console.log("Fixing 1.8.9.json...");
+                const json = JSON.parse(
+                  await fsPromises.readFile(
+                    `${EvieClient}/build/versions/1.8.9/1.8.9.json`,
+                    "utf8"
+                  )
+                );
+                const fileBuffer = fs.readFileSync(
+                  `${EvieClient}/build/versions/1.8.9/1.8.9.jar`
+                );
+                const sha1 = crypto
+                  .createHash("sha1")
+                  .update(fileBuffer)
+                  .digest("hex");
+                delete json.assetIndex.sha1;
+                delete json.assetIndex.url;
+                json.downloads.client.sha1 = sha1;
+                await fsPromises.writeFile(
+                  `${EvieClient}/build/versions/1.8.9/1.8.9.json`,
+                  JSON.stringify(json, null, 2)
+                );
+                /*
+                 * Clean up temp folder
+                 */
+                console.log("Cleaning Up...");
+                await fsPromises.rm(`${EvieClient}/temp`, {
+                  recursive: true,
+                });
+                console.log("EvieClient Updated!");
+                resolve();
+              });
+            });
         });
     });
-
-    // unzip EvieClient/versions/1.8.9/1.8.9.jar and EvieClient/versions/EvieClient/EvieClient.jar
-    // then move the unzipped files to EvieClient/temp/BuildData/
-    // then zip the files in EvieClient/temp/BuildData/ and move them to EvieClient/versions/1.8.9/EvieClient.jar
-    // then delete EvieClient/temp/BuildData/
-
-    // if the folder EvieClient/versions/EvieClient/temp does not exist, create it
-    if (!fs.existsSync(`${EvieClient}/versions/EvieClient/temp`)) {
-      fs.mkdirSync(`${EvieClient}/versions/EvieClient/temp`);
-    }
-
-    // if the folder EvieClient/versions/EvieClient/temp/BuildData does not exist, create it
-    if (!fs.existsSync(`${EvieClient}/versions/EvieClient/temp/BuildData`)) {
-      fs.mkdirSync(`${EvieClient}/versions/EvieClient/temp/BuildData`);
-    }
-
-    // unzip EvieClient/versions/EvieClient/EvieClient.jar to EvieClient/versions/EvieClient/temp/
-    fs.createReadStream(`${EvieClient}/versions/EvieClient/EvieClient.jar`)
-      .pipe(
-        unzipper.Extract({
-          path: `${EvieClient}/versions/EvieClient/temp/BuildData`,
-        })
-      )
-      .promise()
-      .then(async () => {
-        // move the unzipped files to EvieClient/versions/EvieClient/temp/BuildData/
-        // every file in EvieClient/versions/EvieClient/temp/BuildData/
-        for (let file of fs.readdirSync(
-          `${EvieClient}/versions/EvieClient/temp/BuildData`
-        )) {
-          // move the file to EvieClient/versions/EvieClient/temp/BuildData/
-          fs.renameSync(
-            `${EvieClient}/versions/EvieClient/temp/BuildData/${file}`,
-            `${EvieClient}/versions/EvieClient/temp/BuildData/${file.replace(
-              "EvieClient",
-              "EvieClient-1.8.9"
-            )}`
-          );
-        }
-      });
+    await update;
+    return true;
   } catch (error) {
     console.log(error);
     return false;
   }
-  return true;
 }
 
 async function PlayGame() {
   try {
     const opts: LaunchOption = {
-      version: "1.8.9",
+      version: await Version.parse(`${EvieClient}/build`, "EvieClient"),
       javaPath: jreLegacy,
-      gamePath: EvieClient,
+      gamePath: `${EvieClient}/build`,
       gameProfile: await getAccountGameProfile(),
       accessToken: await getAccountToken(),
       extraExecOption: {
@@ -178,6 +278,10 @@ async function PlayGame() {
     const proc: Promise<ChildProcess> = launch(opts);
     proc.then((child) => {
       console.log("Game Launched");
+    });
+    // console log the crash message
+    (await proc).on("exit", (err) => {
+      console.log(err);
     });
   } catch (error) {
     console.log(error);
@@ -194,7 +298,7 @@ async function InstallJava() {
       await axios
         .get(url, { responseType: "stream" })
         .then(async (response) => {
-          response.data.pipe(unzipper.Extract({ path: javaLocation }));
+          response.data.pipe(unzip.Extract({ path: javaLocation }));
           response.data.on("finish", () => {
             console.log("Java installed");
           });

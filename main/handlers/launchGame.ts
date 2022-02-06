@@ -15,7 +15,7 @@ import {
 import crypto from "crypto";
 import unzip from "unzip";
 import sevenBin from "7zip-bin";
-import { extractFull, add } from "node-7z";
+import { extractFull, add, extract } from "node-7z";
 import { app } from "electron";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
 import { ChildProcess } from "node:child_process";
@@ -61,24 +61,23 @@ async function Launch() {
     }
   }
   /*
-   * Check if Evie temp folder exists
-   */
-  if (!fs.existsSync(`${EvieClient}/temp`)) {
-    console.log("Evie temp folder does not exist, creating...");
-    try {
-      await fsPromises.mkdir(`${EvieClient}/temp`, { recursive: true });
-    } catch (error) {
-      console.log(error);
-      return;
-    }
-  }
-  /*
-   * Check if Evie build folder exists
+   * Make sure vital folders exist
    */
   if (!fs.existsSync(`${EvieClient}/build`)) {
     console.log("Evie build folder does not exist, creating...");
     try {
-      await fsPromises.mkdir(`${EvieClient}/build`, { recursive: true });
+      await fsPromises.mkdir(
+        `${EvieClient}/build/libraries/com/evieclient/EvieClient/1.0.0`,
+        { recursive: true }
+      );
+      await fsPromises.mkdir(
+        `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2`,
+        { recursive: true }
+      );
+      await fsPromises.mkdir(
+        `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5`,
+        { recursive: true }
+      );
     } catch (error) {
       console.log(error);
       return;
@@ -89,11 +88,11 @@ async function Launch() {
    */
   console.log("Updating EvieClient");
   //await VerifyVersionExists("1.8.9");
-  //await UpdateEvieClient();
+  await UpdateEvieClient();
 
   console.log("Game is installed, launching...");
 
-  PlayGame();
+  // PlayGame();
 }
 
 async function VerifyVersionExists(version: string) {
@@ -136,17 +135,21 @@ async function DownloadVersion(versionId: string) {
 
 async function UpdateEvieClient() {
   try {
-    // wrap everything in a promise
+    /*
+     * Evie Mixins
+     */
     const update = new Promise<void>(async (resolve, reject) => {
-      console.log("Downloading Evie Patch...");
+      console.log("Downloading Evie Mixins...");
       const storage = getStorage();
-      await getDownloadURL(ref(storage, "1.8/EvieClient.jar")).then(
+      await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0.jar")).then(
         async (url) => {
           await axios
             .get(url, { responseType: "stream" })
             .then(async (response) => {
               await response.data.pipe(
-                fs.createWriteStream(`${EvieClient}/temp/patch.jar`)
+                fs.createWriteStream(
+                  `${EvieClient}/build/libraries/com/evieclient/EvieClient/1.0.0/EvieClient-1.0.0.jar`
+                )
               );
             })
             .catch((error: AxiosError) => {
@@ -156,104 +159,65 @@ async function UpdateEvieClient() {
       );
 
       /*
-       * To compile the EvieClient jar, we need to merge the patch.jar with the 1.8.9 jar,
-       * Start by unzipping the 1.8.9 jar to a temp folder and then unzipping the patch.jar to a temp folder as well
-       * Then we need to merge the two jars together
+       * Download OptiFine
        */
-      console.log("Unzipping 1.8.9 jar...");
-      const patch = `${EvieClient}/temp/patch.jar`;
-      const minecraft = `${_Minecraft}/versions/1.8.9/1.8.9.jar`;
-      console.log("Unzipping patch.jar...");
-      extractFull(minecraft, `${EvieClient}/temp`, {
-        $bin: pathTo7zip,
-      })
-        .on("progress", (progress) => {
-          console.log(
-            `1.8.9 Class Files Extracted ${Math.round(
-              (progress.percent / 100) * 100
-            )}%`
-          );
-        })
-        .on("end", async () => {
-          console.log("Merging patch.jar with 1.8.9 jar...");
-          extractFull(patch, `${EvieClient}/temp`, {
-            $bin: pathTo7zip,
-          })
-            .on("progress", (progress) => {
-              console.log(
-                `EvieClient Patch Class Files Extracted ${Math.round(
-                  (progress.percent / 100) * 100
-                )}%`
+      console.log("Downloading OptiFine...");
+
+      // To download OptiFine, we need to get the download URL from the optifine.net website as the url is not static and changes every time
+      // Firstly request http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar then parse the html to get the download link for the OptiFine jar
+      await axios
+        .get("http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar")
+        .then(async (response) => {
+          const html = response.data;
+          // the download link is in the html as a a href link it looks like this <a href='downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=key' onclick='onDownload()'>OptiFine 1.8.9 HD U M5</a>
+          const downloadLink = html.match(
+            /<a href='downloadx\?f=OptiFine_1.8.9_HD_U_M5.jar&x=(.*?)'/
+          )[1];
+          // now we can request the download link and pipe it to the file
+          await axios
+            .get(
+              `http://optifine.net/downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=${downloadLink}`,
+              { responseType: "stream" }
+            )
+            .then(async (response) => {
+              await response.data.pipe(
+                fs.createWriteStream(
+                  `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`
+                )
               );
-            })
-            .on("end", async () => {
-              console.log("Compiling EvieClient...");
-              console.log("Deleteing patch.jar...");
-              await fsPromises.unlink(`${EvieClient}/temp/patch.jar`);
-              console.log("Copying class files...");
-              add(`${EvieClient}/build/EvieClient.jar`, `${EvieClient}/temp/`, {
-                $bin: pathTo7zip,
-              }).on("end", async () => {
-                /*
-                 * After the patch.jar is merged with the 1.8.9 jar, setup the EvieClient folder
-                 */
-                console.log("Setting up EvieClient folder...");
-                await fsPromises.mkdir(`${EvieClient}/build/versions/1.8.9`, {
-                  recursive: true,
-                });
-                /*
-                 * Grab the 1.8.9.json file and copy it to the build folder
-                 */
-                console.log("Copying 1.8.9.json to build folder...");
-                await fsPromises.copyFile(
-                  `${_Minecraft}/versions/1.8.9/1.8.9.json`,
-                  `${EvieClient}/build/versions/1.8.9/1.8.9.json`
-                );
-                console.log("Copying EvieClient.jar to build folder...");
-                /*
-                 * Move EvieClient.jar to 1.8.9.jar
-                 */
-                console.log("Moving EvieClient.jar to 1.8.9.jar...");
+              // now that we have the jar, we have to move it to EvieClient/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar
+              // and inside the jar we need to get launchwrapper-of-2.2.jar and move it to EvieClient/build/libraries/optifine/launcherwrapper-of/2.2/launchwrapper-of-2.2.jar
+              // we can do this by using node-7z to extract the jar in the temp folder and then move the files to the correct folders
+              await extractFull(
+                `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
+                `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
+                {
+                  $bin: pathTo7zip,
+                }
+              ).on("end", async () => {
                 await fsPromises.rename(
-                  `${EvieClient}/build/EvieClient.jar`,
-                  `${EvieClient}/build/versions/1.8.9/1.8.9.jar`
+                  `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar`,
+                  `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar`
                 );
-                /*
-                 * Remove sha1 key from 1.8.9.json as we just mixed the two jars together
-                 */
-                console.log("Fixing 1.8.9.json...");
-                const json = JSON.parse(
-                  await fsPromises.readFile(
-                    `${EvieClient}/build/versions/1.8.9/1.8.9.json`,
-                    "utf8"
-                  )
+                await fsPromises.rename(
+                  `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5/launchwrapper-of-2.2.jar`,
+                  `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
                 );
-                const fileBuffer = fs.readFileSync(
-                  `${EvieClient}/build/versions/1.8.9/1.8.9.jar`
+                await fsPromises.rmdir(
+                  `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
+                  { recursive: true }
                 );
-                const sha1 = crypto
-                  .createHash("sha1")
-                  .update(fileBuffer)
-                  .digest("hex");
-                delete json.assetIndex.sha1;
-                delete json.assetIndex.url;
-                json.downloads.client.sha1 = sha1;
-                await fsPromises.writeFile(
-                  `${EvieClient}/build/versions/1.8.9/1.8.9.json`,
-                  JSON.stringify(json, null, 2)
-                );
-                /*
-                 * Clean up temp folder
-                 */
-                console.log("Cleaning Up...");
-                await fsPromises.rm(`${EvieClient}/temp`, {
-                  recursive: true,
-                });
-                console.log("EvieClient Updated!");
-                resolve();
               });
+            })
+            .catch((error: AxiosError) => {
+              console.log(error);
             });
+        })
+        .catch((error: AxiosError) => {
+          console.log(error);
         });
+
+      resolve();
     });
     await update;
     return true;

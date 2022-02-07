@@ -5,7 +5,8 @@ import {
   installDependencies,
   installForge,
 } from "@xmcl/installer";
-import { LaunchOption, Version, launch, ResolvedVersion } from "@xmcl/core";
+import { launch } from "../utils/launch/core/dist/index.esm";
+import { LaunchOption, Version, ResolvedVersion } from "@xmcl/core";
 import unzip from "unzip";
 import sevenBin from "7zip-bin";
 import { extract } from "node-7z";
@@ -90,53 +91,14 @@ async function Launch() {
    * Update/Verify EvieClient
    */
   LaunchStatus.log("Updating EvieClient");
-  // await UpdateEvieClient();
+  await UpdateEvieClient();
 
   LaunchStatus.log("Game is installed, launching...");
   PlayGame();
 }
 
-async function DownloadVersion(versionId: string) {
-  try {
-    const list: MinecraftVersion[] = (await getVersionList()).versions;
-    const aVersion: MinecraftVersion = list.find(
-      (version: MinecraftVersion) => version.id === versionId
-    );
-    await install(aVersion, `${EvieClient}/build`);
-  } catch (error) {
-    LaunchStatus.log(error);
-    return false;
-  }
-  return true;
-}
-
 async function UpdateEvieClient() {
   try {
-    /*
-     * Base game
-     * Using axios get https://gist.githubusercontent.com/twisttaan/62d8552358292734202dd9d1102fd2e9/raw/f7022076f5ccfad9b2e77e0a6c50555f5f054e04/EvieClient.json and copy it to
-     * EvieClient/build/versions/EvieClient/EvieClient.json
-     */
-    const evieLauncherProfile = await axios.get(
-      "https://gist.githubusercontent.com/twisttaan/62d8552358292734202dd9d1102fd2e9/raw/f7022076f5ccfad9b2e77e0a6c50555f5f054e04/EvieClient.json"
-    );
-
-    await fsPromises.mkdir(`${EvieClient}/build/versions/EvieClient`, {
-      recursive: true,
-    });
-
-    await fsPromises.writeFile(
-      `${EvieClient}/build/versions/EvieClient/EvieClient.json`,
-      JSON.stringify(evieLauncherProfile.data)
-    );
-
-    // const resolvedVersion: ResolvedVersion = await Version.parse(
-    //   `${EvieClient}/build`,
-    //   "EvieClient"
-    // );
-
-    // await installDependencies(resolvedVersion);
-
     /*
      * Evie Mixins
      */
@@ -173,10 +135,28 @@ async function UpdateEvieClient() {
               );
             })
             .catch((error: AxiosError) => {
-              LaunchStatus.log(error);
+              LaunchStatus.err(error);
             });
         }
       );
+
+      LaunchStatus.log("Checking if OptiFine is installed...");
+      if (
+        !fs.existsSync(
+          `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
+        )
+      ) {
+        LaunchStatus.log("OptiFine is not installed, installing...");
+      } else if (
+        !fs.existsSync(
+          `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
+        )
+      ) {
+        LaunchStatus.log("OptiFine is not installed, installing...");
+      } else {
+        LaunchStatus.log("OptiFine is installed, not skipping...");
+        // return resolve(); TODO: Fix the bug where the game doesn't launch if I don't update OptiFine every launch...
+      }
 
       /*
        * Download OptiFine
@@ -233,7 +213,7 @@ async function UpdateEvieClient() {
                     // now that we have the jar, we have to move it to EvieClient/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar
                     // and inside the jar we need to get launchwrapper-of-2.2.jar and move it to EvieClient/build/libraries/optifine/launcherwrapper-of/2.2/launchwrapper-of-2.2.jar
                     // we can do this by using node-7z to extract the jar in the temp folder and then move the files to the correct folders
-                    LaunchStatus.log("Extraing OptiFine...");
+                    LaunchStatus.log("Extracting OptiFine...");
                     await fsPromises.mkdir(
                       `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
                       {
@@ -254,7 +234,7 @@ async function UpdateEvieClient() {
                       );
                       await fsPromises.rename(
                         `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
-                        `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar`
+                        `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
                       );
                       resolve();
                     });
@@ -262,61 +242,52 @@ async function UpdateEvieClient() {
               );
             })
             .catch((error: AxiosError) => {
-              LaunchStatus.log(error);
+              LaunchStatus.err(error);
             });
         })
         .catch((error: AxiosError) => {
-          LaunchStatus.log(error);
+          LaunchStatus.err(error);
         });
     });
     await update;
     return true;
   } catch (error) {
-    LaunchStatus.log(error);
+    LaunchStatus.err(error);
     return false;
   }
 }
 
 async function PlayGame() {
   // install 1.8.9
+  LaunchStatus.log("Finding 1.8.9...");
   const list: MinecraftVersion[] = (await getVersionList()).versions;
 
   const aVersion: MinecraftVersion = list.find(
     (version) => version.id === "1.8.9"
   );
+  LaunchStatus.log("Installing 1.8.9...");
   await install(aVersion, `${EvieClient}/build/`);
-  // add { "test": "test" } to the EvieClient/build/versions/1.8.9/1.8.9.json libarbeies section
-  const json = JSON.parse(
-    await fsPromises.readFile(
-      `${EvieClient}/build/versions/1.8.9/1.8.9.json`,
-      "utf8"
-    )
-  );
-  json.libraries.push(
-    {
-      name: "optifine:OptiFine:1.8.9_HD_U_M5",
-    },
-    {
-      name: "com.evieclient.EvieClient:1.0.0",
-    },
-    {
-      name: "optifine:launchwrapper-of:2.2",
-    }
-  );
-  json.mainClass = "net.minecraft.launchwrapper.Launch";
-  json.minecraftArguments =
-    "--username ${auth_player_name} --version ${version_name} --gameDir ${game_directory} --assetsDir ${assets_root} --assetIndex ${assets_index_name} --uuid ${auth_uuid} --accessToken ${auth_access_token} --userProperties ${user_properties} --userType ${user_type} --tweakClass optifine.OptiFineForgeTweaker --tweakClass com.EvieClient.mixins.EvieTweaker";
+  LaunchStatus.log("Installed 1.8.9");
+
+  // Make sure the EvieClient version directory exists
+  LaunchStatus.log("Making EvieClient version directory...");
+  await fsPromises.mkdir(`${EvieClient}/build/versions/EvieClient`, {
+    recursive: true,
+  });
+  LaunchStatus.log("It exists now, I think");
+  LaunchStatus.log("Updating EvieClient launch script...");
+  const launcherJson = await axios
+    .get("https://evie.pw/api/getLauncherJson")
+    .then((response) => response.data);
   await fsPromises.writeFile(
-    `${EvieClient}/build/versions/1.8.9/1.8.9.json`,
-    JSON.stringify(json, null, 2),
-    "utf8"
+    `${EvieClient}/build/versions/EvieClient/EvieClient.json`,
+    JSON.stringify(launcherJson, null, 2)
   );
 
   try {
     const opts: LaunchOption = {
-      version: "1.8.9",
-      javaPath:
-        "/Users/tristan/Library/Application Support/minecraft/runtime/jre-legacy/mac-os/jre-legacy/jre.bundle/Contents/Home/bin/java",
+      version: "EvieClient",
+      javaPath: jreLegacy,
       gamePath: `${EvieClient}/build`,
       gameProfile: await getAccountGameProfile(),
       accessToken: await getAccountToken(),
@@ -333,7 +304,11 @@ async function PlayGame() {
       LaunchStatus.log(err);
     });
   } catch (error) {
-    LaunchStatus.log(error);
+    LaunchStatus.err("*** uh oh ***");
+    LaunchStatus.log("Game Launch Failed!");
+    LaunchStatus.err("*** uh oh ***");
+
+    LaunchStatus.err(error);
     return false;
   }
   return true;
@@ -353,11 +328,11 @@ async function InstallJava() {
           });
         })
         .catch((error: AxiosError) => {
-          LaunchStatus.log(error);
+          LaunchStatus.err(error);
         });
     });
   } catch (error) {
-    LaunchStatus.log(error);
+    LaunchStatus.err(error);
     return false;
   }
   return true;

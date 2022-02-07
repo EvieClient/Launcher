@@ -27,6 +27,7 @@
     "chalk": "^4.0.0",
     "electron-serve": "^1.1.0",
     "electron-store": "^8.0.1",
+    "express": "^4.17.2",
     "firebase": "^9.6.5",
     "minecraft-auth": "^1.0.29",
     "node-7z": "^3.0.0",

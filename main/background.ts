@@ -1,12 +1,14 @@
-import { app, webFrame, ipcRenderer } from "electron";
+import { app, webFrame, ipcRenderer, BrowserWindow, session } from "electron";
 import serve from "electron-serve";
 import { fetchFirebase } from "./firebase";
 import Launch, { EvieClient } from "./handlers/launchGame";
 import { signInViaMicrosoft, signInViaMojang } from "./handlers/userAuth";
 import { createWindow } from "./helpers";
+import axios, { AxiosError } from "axios";
 
 fetchFirebase();
 console.log(`EvieClient lives in ${EvieClient}`);
+export let mainWindow: BrowserWindow;
 
 const ipc = require("electron").ipcMain;
 const isProd: boolean = process.env.NODE_ENV === "production";
@@ -19,7 +21,8 @@ if (isProd) {
 
 (async () => {
   await app.whenReady();
-  const mainWindow = createWindow("main", {
+
+  mainWindow = createWindow("main", {
     width: 1312,
     height: 806,
     resizable: false,
@@ -52,6 +55,26 @@ ipc.on("sign-in-via-mojang", function (event, arg) {
 
 ipc.on("sign-out", function (event, arg) {
   signInViaMojang(arg.username, arg.password);
+});
+
+type Post = {
+  id: number;
+  title: string;
+  imageURL: string;
+  description: string;
+  date: string;
+};
+
+ipc.on("fetch-news", async function (event, arg) {
+  await axios
+    .get("https://evie.pw/api/getNews")
+    .then((response) => {
+      const posts: Post[] = response.data;
+      mainWindow.webContents.send("fetch-news-reply", posts);
+    })
+    .catch((error: AxiosError) => {
+      console.log(error);
+    });
 });
 
 app.on("window-all-closed", () => {

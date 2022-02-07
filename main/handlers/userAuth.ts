@@ -8,6 +8,9 @@ import {
 } from "minecraft-auth";
 import * as fs from "fs";
 import { GameProfile } from "@xmcl/user";
+import { mainWindow } from "../background";
+import { createWindow } from "../helpers";
+import express from "express";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
 const ipc = require("electron").ipcMain;
 
@@ -81,17 +84,106 @@ async function storeAccountToken(account: Account) {
   }
 }
 
-async function signInViaMicrosoft() {
+async function signInViaMicrosoft(integratedWindow: boolean) {
   const account = new MicrosoftAccount();
   try {
     let _event: IpcMainEvent;
     let appID = "79d63740-a433-4f6d-8c3d-19f997d868b8";
     let appSecret = "ymc7Q~uH~ljrgOarWbn2eUFrlueW1txTE6rTx";
-    let redirectURL = "http://localhost/auth";
+    let redirectURL = "http://localhost:9998/auth/microsoft";
+
     MicrosoftAuth.setup(appID, appSecret, redirectURL);
-    console.log(MicrosoftAuth.createUrl());
+
+    if (integratedWindow) {
+      let authwindow = createWindow("main", {
+        width: 500,
+        height: 500,
+        resizable: false,
+        autoHideMenuBar: true,
+        webPreferences: {
+          nodeIntegration: true,
+        },
+      });
+      // init express router
+      const app = express();
+      // listen on port 9998 with the router
+      const server = app.listen(9998, () => {
+        console.log("listening on port 9998");
+      });
+      // setup express to recive requests for /auth/microsoft with a query param of code
+      app.get("/auth/microsoft", async (req, res) => {
+        // get the code from the query param
+        const code = req.query.code;
+        console.log("i received a code for a microsoft account over express");
+        // verify the code is a string
+        if (typeof code !== "string") {
+          res
+            .status(400)
+            .send(
+              "code is not a string, maybe don't reverse engineer this ok thx?"
+            );
+          return;
+        }
+        // verify the code is not empty
+        if (code.length === 0) {
+          res
+            .status(400)
+            .send("code is empty, maybe don't reverse engineer this ok thx?");
+          return;
+        }
+        await account.authFlow(code);
+        console.log(`${account.username} signed in`);
+        console.log(`Storing account token`);
+        await storeAccountToken(account);
+        _event.reply("signedIn");
+
+        res.send("all good :) close this tab").on("finish", () => {
+          server.close();
+        });
+      });
+      authwindow.loadURL(MicrosoftAuth.createUrl());
+    } else {
+      // init express router
+      const app = express();
+      // listen on port 9998 with the router
+      const server = app.listen(9998, () => {
+        console.log("listening on port 9998");
+      });
+      // setup express to recive requests for /auth/microsoft with a query param of code
+      app.get("/auth/microsoft", async (req, res) => {
+        // get the code from the query param
+        const code = req.query.code;
+        console.log("i received a code for a microsoft account over express");
+        // verify the code is a string
+        if (typeof code !== "string") {
+          res
+            .status(400)
+            .send(
+              "code is not a string, maybe don't reverse engineer this ok thx?"
+            );
+          return;
+        }
+        // verify the code is not empty
+        if (code.length === 0) {
+          res
+            .status(400)
+            .send("code is empty, maybe don't reverse engineer this ok thx?");
+          return;
+        }
+        await account.authFlow(code);
+        console.log(`${account.username} signed in`);
+        console.log(`Storing account token`);
+        await storeAccountToken(account);
+        _event.reply("signedIn");
+
+        res.status(200).send("all good :) close this tab");
+        server.close();
+      });
+      electron.shell.openExternal(MicrosoftAuth.createUrl());
+    }
+
     const code = await new Promise((resolve, reject) => {
-      ipc.on("code", (event, code) => {
+      ipc.on("microsoft-code", (event, code) => {
         _event = event;
         resolve(code);
       });

@@ -45,8 +45,8 @@ ipc.on("launch-game", function (event, arg) {
   Launch();
 });
 
-ipc.on("sign-in-via-microsoft", function (event, arg) {
-  signInViaMicrosoft();
+ipc.on("sign-in-via-microsoft", function (event, arg: boolean) {
+  signInViaMicrosoft(arg);
 });
 
 ipc.on("sign-in-via-mojang", function (event, arg) {

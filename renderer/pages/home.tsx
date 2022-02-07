@@ -4,17 +4,6 @@ import Nav from "../components/nav";
 import Launch from "../components/launch";
 import News from "../components/news";
 
-const posts = [
-  {
-    id: 1,
-    title: "Example Post",
-    imageURL:
-      "https://images.unsplash.com/photo-1643575102128-0d6b42fbdda1?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1632&q=80",
-    description: "This is an example post.",
-    date: "2020-01-01",
-  },
-];
-
 function Home() {
   return (
     <React.Fragment>

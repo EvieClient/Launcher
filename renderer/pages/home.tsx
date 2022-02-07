@@ -1,6 +1,5 @@
 import React from "react";
 import Head from "next/head";
-import Link from "next/link";
 import Nav from "../components/nav";
 import Launch from "../components/launch";
 import News from "../components/news";
@@ -52,7 +51,7 @@ function Home() {
               />
             </div>
             <div className="flex flex-wrap ">
-              <News posts={posts} />
+              <News />
             </div>
           </div>
         </div>

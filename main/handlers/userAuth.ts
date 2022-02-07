@@ -32,8 +32,7 @@ async function getAccountToken(): Promise<string | null> {
       fs.readFileSync(`${EvieDir}/accountinfo.private`, "utf8")
     ).token;
   } else {
-    console.log("No account token found");
-    return null;
+    throw new Error("No account token found! Please sign in, Piracy is Crime");
   }
   return accountToken;
 }
@@ -54,8 +53,7 @@ async function getAccountGameProfile(): Promise<GameProfile | null> {
     };
     return profile;
   } else {
-    console.log("No account token found");
-    return null;
+    throw new Error("No account token found! Please sign in, Piracy is Crime");
   }
 }
 

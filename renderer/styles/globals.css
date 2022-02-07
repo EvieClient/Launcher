@@ -6,9 +6,10 @@
 /* Start purging... */
 @tailwind components;
 /* Stop purging. */
-
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300&display=swap");
 html,
 body {
+  font-family: "Poppins", sans-serif;
   @apply bg-gray-900 text-white;
   overflow: hidden !important;
   -webkit-touch-callout: none; /* iOS Safari */

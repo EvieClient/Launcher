@@ -1,11 +1,12 @@
 import { app, webFrame, ipcRenderer } from "electron";
 import serve from "electron-serve";
 import { fetchFirebase } from "./firebase";
-import Launch from "./handlers/launchGame";
+import Launch, { EvieClient } from "./handlers/launchGame";
 import { signInViaMicrosoft, signInViaMojang } from "./handlers/userAuth";
 import { createWindow } from "./helpers";
 
 fetchFirebase();
+console.log(`EvieClient lives in ${EvieClient}`);
 
 const ipc = require("electron").ipcMain;
 const isProd: boolean = process.env.NODE_ENV === "production";

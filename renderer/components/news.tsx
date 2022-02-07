@@ -13,6 +13,7 @@ function News(props: { posts: Post[] }) {
     <React.Fragment>
       {props.posts.map((post) => (
         <div
+          key={post.id}
           className="md:w-1/3 pr-4 pl-4 cust_blogteaser"
           style={{ paddingBottom: "20px", marginBottom: "32px" }}
         >

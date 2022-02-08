@@ -1,6 +1,6 @@
-import electron, { app, Event, IpcMainEvent, webContents } from "electron";
+import electron, { app } from "electron";
+import * as bgStatus from "../utils/log/bgStatus";
 import {
-  account,
   Account,
   MicrosoftAccount,
   MicrosoftAuth,
@@ -8,13 +8,17 @@ import {
 } from "minecraft-auth";
 import * as fs from "fs";
 import { GameProfile } from "@xmcl/user";
+import { createWindow } from "../helpers";
+import { bgExpressServer } from "../utils/bgExpressServer";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
-const ipc = require("electron").ipcMain;
 
 async function signInViaMojang(username: string, password: string) {
   const account = new MojangAccount();
   try {
     await account.Login(username, password);
+    await account.getProfile();
+    bgStatus.auth(`Storing new account token for ${account.username}`);
+    await storeAccountToken(account);
   } catch (error) {
     console.log(error);
     return null;
@@ -53,7 +57,7 @@ async function getAccountGameProfile(): Promise<GameProfile | null> {
     };
     return profile;
   } else {
-    throw new Error("No account token found! Please sign in, Piracy is Crime");
+    throw new Error("No account token found!");
   }
 }
 
@@ -81,26 +85,38 @@ async function storeAccountToken(account: Account) {
   }
 }
 
-async function signInViaMicrosoft() {
+async function signInViaMicrosoft(integratedWindow: boolean) {
   const account = new MicrosoftAccount();
   try {
-    let _event: IpcMainEvent;
     let appID = "79d63740-a433-4f6d-8c3d-19f997d868b8";
     let appSecret = "ymc7Q~uH~ljrgOarWbn2eUFrlueW1txTE6rTx";
-    let redirectURL = "http://localhost/auth";
+    let redirectURL = "http://localhost:9998/auth/microsoft";
+
     MicrosoftAuth.setup(appID, appSecret, redirectURL);
-    console.log(MicrosoftAuth.createUrl());
+
+    if (integratedWindow) {
+      let authwindow = createWindow("main", {
+        width: 500,
+        height: 500,
+        resizable: false,
+        autoHideMenuBar: true,
+        webPreferences: {
+          nodeIntegration: true,
+        },
+      });
+      authwindow.loadURL(MicrosoftAuth.createUrl());
+    } else {
+      electron.shell.openExternal(MicrosoftAuth.createUrl());
+    }
     const code = await new Promise((resolve, reject) => {
-      ipc.on("code", (event, code) => {
-        _event = event;
+      bgExpressServer.events.on("microsoft-code", (code) => {
         resolve(code);
       });
     });
     await account.authFlow(code);
-    console.log(`${account.username} signed in`);
-    console.log(`Storing account token`);
+    await account.getProfile();
+    bgStatus.auth(`Storing new account token for ${account.username}`);
     await storeAccountToken(account);
-    _event.reply("signedIn");
   } catch (e) {
     console.error(e);
   }

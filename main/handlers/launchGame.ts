@@ -5,9 +5,7 @@ import {
   installDependencies,
   installForge,
 } from "@xmcl/installer";
-import { launch } from "../utils/launch/core/dist/index.esm";
-import { LaunchOption, Version, ResolvedVersion } from "@xmcl/core";
-import unzip from "unzip";
+import { LaunchOption, Version, launch } from "@xmcl/core";
 import sevenBin from "7zip-bin";
 import { extract } from "node-7z";
 import { app } from "electron";
@@ -17,7 +15,9 @@ import fs from "fs";
 const fsPromises = fs.promises;
 import axios, { AxiosError } from "axios";
 import { getAccountGameProfile, getAccountToken } from "./userAuth";
-import * as LaunchStatus from "../utils/LaunchStatus";
+import * as LaunchStatus from "../utils/log/LaunchStatus";
+import InstallJava from "../utils/installJava";
+import os from "os";
 
 /*
  * Global Variables
@@ -25,16 +25,13 @@ import * as LaunchStatus from "../utils/LaunchStatus";
 const pathTo7zip = sevenBin.path7za;
 export const EvieClient = `${app.getPath("appData")}/.evieclient`;
 const _Minecraft = `${app.getPath("appData")}/.minecraft`;
-const javaLocation = `${app.getPath("appData")}/.evieclient/java/`;
-const jreLegacy = `${app.getPath(
-  "appData"
-)}/.evieclient/java/jre-legacy/bin/java.exe`;
+export const javaLocation = `${app.getPath("appData")}/.evieclient/java/`;
 
 async function Launch() {
   /*
    * Check if Java is Installed
    */
-  if (!fs.existsSync(jreLegacy)) {
+  if (!fs.existsSync(`${javaLocation}/jre`)) {
     LaunchStatus.log("Java is not installed, installing...");
     try {
       await InstallJava();
@@ -105,7 +102,7 @@ async function UpdateEvieClient() {
     const update = new Promise<void>(async (resolve, reject) => {
       LaunchStatus.log("Getting Evie Mixins...");
       const storage = getStorage();
-      await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0.jar")).then(
+      await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0_obf.jar")).then(
         async (url) => {
           LaunchStatus.log("Downloading Evie mixins...");
           await axios
@@ -287,7 +284,9 @@ async function PlayGame() {
   try {
     const opts: LaunchOption = {
       version: "EvieClient",
-      javaPath: jreLegacy,
+      javaPath: `${javaLocation}/jre/${
+        os.platform() === "win32" ? "java.exe" : "java"
+      }`,
       gamePath: `${EvieClient}/build`,
       gameProfile: await getAccountGameProfile(),
       accessToken: await getAccountToken(),
@@ -308,30 +307,6 @@ async function PlayGame() {
     LaunchStatus.log("Game Launch Failed!");
     LaunchStatus.err("*** uh oh ***");
 
-    LaunchStatus.err(error);
-    return false;
-  }
-  return true;
-}
-
-async function InstallJava() {
-  try {
-    const storage = getStorage();
-    getDownloadURL(ref(storage, "java/jre-legacy.zip")).then(async (url) => {
-      //download the url using axios then extract it
-      await axios
-        .get(url, { responseType: "stream" })
-        .then(async (response) => {
-          response.data.pipe(unzip.Extract({ path: javaLocation }));
-          response.data.on("finish", () => {
-            LaunchStatus.log("Java installed");
-          });
-        })
-        .catch((error: AxiosError) => {
-          LaunchStatus.err(error);
-        });
-    });
-  } catch (error) {
     LaunchStatus.err(error);
     return false;
   }

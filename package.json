@@ -29,6 +29,7 @@
     "electron-store": "^8.0.1",
     "express": "^4.17.2",
     "firebase": "^9.6.5",
+    "log4js": "^6.4.1",
     "minecraft-auth": "^1.0.29",
     "node-7z": "^3.0.0",
     "prompt": "^1.2.1",

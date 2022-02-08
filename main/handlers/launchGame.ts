@@ -15,7 +15,7 @@ import fs from "fs";
 const fsPromises = fs.promises;
 import axios, { AxiosError } from "axios";
 import { getAccountGameProfile, getAccountToken } from "./userAuth";
-import * as LaunchStatus from "../utils/LaunchStatus";
+import * as LaunchStatus from "../utils/log/LaunchStatus";
 import InstallJava from "../utils/installJava";
 import os from "os";
 
@@ -26,23 +26,20 @@ const pathTo7zip = sevenBin.path7za;
 export const EvieClient = `${app.getPath("appData")}/.evieclient`;
 const _Minecraft = `${app.getPath("appData")}/.minecraft`;
 export const javaLocation = `${app.getPath("appData")}/.evieclient/java/`;
-const jreLegacy = `${app.getPath(
-  "appData"
-)}/.evieclient/java/jre-legacy/bin/java.exe`;
 
 async function Launch() {
   /*
    * Check if Java is Installed
    */
-  //if (!fs.existsSync(jreLegacy)) {
-  LaunchStatus.log("Java is not installed, installing...");
-  try {
-    await InstallJava();
-  } catch (error) {
-    LaunchStatus.log(error);
-    return;
+  if (!fs.existsSync(`${javaLocation}/jre`)) {
+    LaunchStatus.log("Java is not installed, installing...");
+    try {
+      await InstallJava();
+    } catch (error) {
+      LaunchStatus.log(error);
+      return;
+    }
   }
-  //}
   /*
    * Check if .minecraft folder exists
    */
@@ -105,7 +102,7 @@ async function UpdateEvieClient() {
     const update = new Promise<void>(async (resolve, reject) => {
       LaunchStatus.log("Getting Evie Mixins...");
       const storage = getStorage();
-      await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0.jar")).then(
+      await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0_obf.jar")).then(
         async (url) => {
           LaunchStatus.log("Downloading Evie mixins...");
           await axios
@@ -287,7 +284,7 @@ async function PlayGame() {
   try {
     const opts: LaunchOption = {
       version: "EvieClient",
-      javaPath: `${javaLocation}/bin/${
+      javaPath: `${javaLocation}/jre/${
         os.platform() === "win32" ? "java.exe" : "java"
       }`,
       gamePath: `${EvieClient}/build`,

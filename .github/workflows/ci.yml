@@ -32,11 +32,11 @@ jobs:
         uses: actions/download-artifact@master
         with:
           name: EvieLauncherRelease
-      - name: Publish
-        env:
-          GITHUB_TOKEN: "${{ secrets.RELEASE_REPO_SECRET }}"
-        run: |
-          git clone https://github.com/EvieClient/EvieClient-Releases
-          cd EvieClient-Releases
-          ./../bin/hub release delete "latest-master"
-          ./../bin/hub release create -a "../Evie Client Setup 1.0.0.exe" -m "Current Master Build: Evie Client Setup 1.0.0.exe" -p "latest-master"
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: false
+          title: "Latest Build"
+          files: |
+            *.exe

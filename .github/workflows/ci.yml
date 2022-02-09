@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  Windows:
     runs-on: windows-latest
     timeout-minutes: 60
     steps:
@@ -16,22 +16,16 @@ jobs:
       - name: Upload Release
         uses: actions/upload-artifact@master
         with:
-          name: EvieLauncherRelease
+          name: EvieLauncherReleaseWin
           path: "dist/Evie Client Setup 1.0.0.exe"
       - name: Push new version to master
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions"
-      - name: Get Hub
-        run: |
-          curl -fsSL https://github.com/github/hub/raw/master/script/get | bash -s 2.14.1
-          cd bin
-          chmod +x hub
-          cd ..
       - name: Get Release
         uses: actions/download-artifact@master
         with:
-          name: EvieLauncherRelease
+          name: EvieLauncherReleaseWin
       - name: Display structure of downloaded files
         run: ls -R
       - name: Publish
@@ -43,3 +37,34 @@ jobs:
           title: "Latest Build"
           files: |
             *.exe
+  MacOS:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Evie Launcher
+        run: yarn && yarn build
+      - name: Upload Release
+        uses: actions/upload-artifact@master
+        with:
+          name: EvieLauncherReleaseMac
+          path: "dist/Evie Client-1.0.0.dmg"
+      - name: Push new version to master
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions"
+      - name: Get Release
+        uses: actions/download-artifact@master
+        with:
+          name: EvieLauncherReleaseMac
+      - name: Display structure of downloaded files
+        run: ls -R
+      - name: Publish
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: false
+          title: "Latest Build"
+          files: |
+            *.dmg

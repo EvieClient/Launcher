@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Build Evie Launcher
+        run: yarn && yarn build
+      - name: Upload Release
+        uses: actions/upload-artifact@master
+        with:
+          name: EvieLauncherRelease
+          path: "dist/Evie Client Setup 1.0.0.exe"
+      - name: Push new version to master
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions"
+          git commit -m "Increment Build version" -a
+      - name: Get Hub
+        run: |
+          curl -fsSL https://github.com/github/hub/raw/master/script/get | bash -s 2.14.1
+          cd bin
+          chmod +x hub
+          cd ..
+      - name: Get Release
+        uses: actions/download-artifact@master
+        with:
+          name: EvieLauncherRelease
+      - name: Publish
+        env:
+          GITHUB_TOKEN: "${{ secrets.RELEASE_REPO_SECRET }}"
+        run: |
+          APP_NAME=EvieLauncher
+          VERSION_NAME=Release
+          VERSION_CODE=1
+          FILENAME="Evie Client Setup 1.0.0.exe"
+          TAG="v${VERSION_NAME}-${VERSION_CODE}"
+          TAG="latest-master"
+          echo $APP_NAME
+          echo $VERSION_NAME
+          echo $VERSION_CODE
+          echo $FILENAME
+          echo $TAG
+          git clone https://github.com/EvieClient/EvieClient-Releases
+          cd EvieClient-Releases
+          ./../bin/hub release delete "${TAG}" || echo "Failed deleting TAG: ${TAG}" # If release got lost catch error with message
+          ./../bin/hub release create -a "../${APP_NAME}.apk" -m "Current Master Build: ${FILENAME}" -p "${TAG}"

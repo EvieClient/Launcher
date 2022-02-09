@@ -15,14 +15,15 @@ import fs from "fs";
 const fsPromises = fs.promises;
 import axios, { AxiosError } from "axios";
 import { getAccountGameProfile, getAccountToken } from "./userAuth";
-import * as LaunchStatus from "../utils/log/LaunchStatus";
 import InstallJava from "../utils/installJava";
 import os from "os";
+import { Logger } from "../utils/log/info";
 
 /*
  * Global Variables
  */
 const pathTo7zip = sevenBin.path7za;
+const logger = new Logger("launchGame");
 export const EvieClient = `${app.getPath("appData")}/.evieclient`;
 const _Minecraft = `${app.getPath("appData")}/.minecraft`;
 export const javaLocation = `${app.getPath("appData")}/.evieclient/java/`;
@@ -32,11 +33,11 @@ async function Launch() {
    * Check if Java is Installed
    */
   if (!fs.existsSync(`${javaLocation}/jre`)) {
-    LaunchStatus.log("Java is not installed, installing...");
+    logger.launchStatus("Java is not installed, installing...");
     try {
       await InstallJava();
     } catch (error) {
-      LaunchStatus.log(error);
+      logger.launchStatus(error);
       return;
     }
   }
@@ -44,18 +45,18 @@ async function Launch() {
    * Check if .minecraft folder exists
    */
   if (!fs.existsSync(_Minecraft)) {
-    LaunchStatus.log("Minecraft folder does not exist, creating...");
+    logger.launchStatus("Minecraft folder does not exist, creating...");
     try {
       await fsPromises.mkdir(_Minecraft, { recursive: true });
     } catch (error) {
-      LaunchStatus.log(error);
+      logger.launchStatus(error);
       return;
     }
   }
   /*
    * Make sure vital folders exist
    */
-  LaunchStatus.log("Making sure vital folders exist...");
+  logger.launchStatus("Making sure vital folders exist...");
   try {
     await fsPromises.mkdir(
       `${EvieClient}/build/libraries/com/evieclient/EvieClient/1.0.0`,
@@ -71,26 +72,26 @@ async function Launch() {
     );
     // if temp folder exists delete it and recreate it otherwise create it
     if (fs.existsSync(`${EvieClient}/temp`)) {
-      LaunchStatus.log("Deleting existing temp folder...");
+      logger.launchStatus("Deleting existing temp folder...");
       await fsPromises.rm(`${EvieClient}/temp`, { recursive: true });
-      LaunchStatus.log("Creating new temp folder...");
+      logger.launchStatus("Creating new temp folder...");
       await fsPromises.mkdir(`${EvieClient}/temp`, { recursive: true });
     } else {
-      LaunchStatus.log("Creating temp folder...");
+      logger.launchStatus("Creating temp folder...");
       await fsPromises.mkdir(`${EvieClient}/temp`, { recursive: true });
     }
   } catch (error) {
-    LaunchStatus.log(error);
+    logger.launchStatus(error);
     return;
   }
 
   /*
    * Update/Verify EvieClient
    */
-  LaunchStatus.log("Updating EvieClient");
+  logger.launchStatus("Updating EvieClient");
   await UpdateEvieClient();
 
-  LaunchStatus.log("Game is installed, launching...");
+  logger.launchStatus("Game is installed, launching...");
   PlayGame();
 }
 
@@ -100,16 +101,16 @@ async function UpdateEvieClient() {
      * Evie Mixins
      */
     const update = new Promise<void>(async (resolve, reject) => {
-      LaunchStatus.log("Getting Evie Mixins...");
+      logger.launchStatus("Getting Evie Mixins...");
       const storage = getStorage();
       await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0_obf.jar")).then(
         async (url) => {
-          LaunchStatus.log("Downloading Evie mixins...");
+          logger.launchStatus("Downloading Evie mixins...");
           await axios
             .get(url, {
               responseType: "stream",
               onDownloadProgress: (e: ProgressEvent) => {
-                LaunchStatus.log(
+                logger.launchStatus(
                   `Downloading Mixins: ${Math.round(
                     (e.loaded / e.total) * 100
                   )}%`
@@ -117,14 +118,14 @@ async function UpdateEvieClient() {
               },
             })
             .then(async (response) => {
-              LaunchStatus.log("Making sure the folder exists...");
+              logger.launchStatus("Making sure the folder exists...");
               await fsPromises.mkdir(
                 `${EvieClient}/build/libraries/com/evieclient/EvieClient/1.0.0/`,
                 {
                   recursive: true,
                 }
               );
-              LaunchStatus.log("Saving Mixins...");
+              logger.launchStatus("Saving Mixins...");
               await response.data.pipe(
                 fs.createWriteStream(
                   `${EvieClient}/build/libraries/com/evieclient/EvieClient/1.0.0/EvieClient-1.0.0.jar`
@@ -132,40 +133,40 @@ async function UpdateEvieClient() {
               );
             })
             .catch((error: AxiosError) => {
-              LaunchStatus.err(error);
+              logger.err(error);
             });
         }
       );
 
-      LaunchStatus.log("Checking if OptiFine is installed...");
+      logger.launchStatus("Checking if OptiFine is installed...");
       if (
         !fs.existsSync(
           `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
         )
       ) {
-        LaunchStatus.log("OptiFine is not installed, installing...");
+        logger.launchStatus("OptiFine is not installed, installing...");
       } else if (
         !fs.existsSync(
           `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
         )
       ) {
-        LaunchStatus.log("OptiFine is not installed, installing...");
+        logger.launchStatus("OptiFine is not installed, installing...");
       } else {
-        LaunchStatus.log("OptiFine is installed, not skipping...");
+        logger.launchStatus("OptiFine is installed, not skipping...");
         // return resolve(); TODO: Fix the bug where the game doesn't launch if I don't update OptiFine every launch...
       }
 
       /*
        * Download OptiFine
        */
-      LaunchStatus.log("Fetching OptiFine Download URL...");
+      logger.launchStatus("Fetching OptiFine Download URL...");
 
       // To download OptiFine, we need to get the download URL from the optifine.net website as the url is not static and changes every time
       // Firstly request http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar then parse the html to get the download link for the OptiFine jar
       await axios
         .get("http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar", {
           onDownloadProgress: (e: ProgressEvent) => {
-            LaunchStatus.log(
+            logger.launchStatus(
               `Getting OptiFine Download URL: ${Math.round(
                 (e.loaded / e.total) * 100
               )}%`
@@ -175,12 +176,12 @@ async function UpdateEvieClient() {
         .then(async (response) => {
           const html = response.data;
           // the download link is in the html as a a href link it looks like this <a href='downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=key' onclick='onDownload()'>OptiFine 1.8.9 HD U M5</a>
-          LaunchStatus.log("Looking for download link...");
+          logger.launchStatus("Looking for download link...");
           const downloadLink = html.match(
             /<a href='downloadx\?f=OptiFine_1.8.9_HD_U_M5.jar&x=(.*?)'/
           )[1];
           // now we can request the download link and pipe it to the file
-          LaunchStatus.log(
+          logger.launchStatus(
             `Downloading OptiFine from https://optifine.net/downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=${downloadLink}...`
           );
           await axios
@@ -190,7 +191,7 @@ async function UpdateEvieClient() {
               {
                 responseType: "stream",
                 onDownloadProgress: (e: ProgressEvent) => {
-                  LaunchStatus.log(
+                  logger.launchStatus(
                     `Downloading OptiFine: ${Math.round(
                       (e.loaded / e.total) * 100
                     )}%`
@@ -199,18 +200,18 @@ async function UpdateEvieClient() {
               }
             )
             .then(async (response) => {
-              LaunchStatus.log("Saving OptiFine...");
+              logger.launchStatus("Saving OptiFine...");
               await response.data.pipe(
                 fs
                   .createWriteStream(
                     `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`
                   )
                   .on("finish", async () => {
-                    LaunchStatus.log("OptiFine Saved");
+                    logger.launchStatus("OptiFine Saved");
                     // now that we have the jar, we have to move it to EvieClient/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar
                     // and inside the jar we need to get launchwrapper-of-2.2.jar and move it to EvieClient/build/libraries/optifine/launcherwrapper-of/2.2/launchwrapper-of-2.2.jar
                     // we can do this by using node-7z to extract the jar in the temp folder and then move the files to the correct folders
-                    LaunchStatus.log("Extracting OptiFine...");
+                    logger.launchStatus("Extracting OptiFine...");
                     await fsPromises.mkdir(
                       `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
                       {
@@ -224,7 +225,7 @@ async function UpdateEvieClient() {
                         $bin: pathTo7zip,
                       }
                     ).on("end", async () => {
-                      LaunchStatus.log("Moving OptiFine...");
+                      logger.launchStatus("Moving OptiFine...");
                       await fsPromises.rename(
                         `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5/launchwrapper-of-2.2.jar`,
                         `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
@@ -239,40 +240,40 @@ async function UpdateEvieClient() {
               );
             })
             .catch((error: AxiosError) => {
-              LaunchStatus.err(error);
+              logger.err(error);
             });
         })
         .catch((error: AxiosError) => {
-          LaunchStatus.err(error);
+          logger.err(error);
         });
     });
     await update;
     return true;
   } catch (error) {
-    LaunchStatus.err(error);
+    logger.err(error);
     return false;
   }
 }
 
 async function PlayGame() {
   // install 1.8.9
-  LaunchStatus.log("Finding 1.8.9...");
+  logger.launchStatus("Finding 1.8.9...");
   const list: MinecraftVersion[] = (await getVersionList()).versions;
 
   const aVersion: MinecraftVersion = list.find(
     (version) => version.id === "1.8.9"
   );
-  LaunchStatus.log("Installing 1.8.9...");
+  logger.launchStatus("Installing 1.8.9...");
   await install(aVersion, `${EvieClient}/build/`);
-  LaunchStatus.log("Installed 1.8.9");
+  logger.launchStatus("Installed 1.8.9");
 
   // Make sure the EvieClient version directory exists
-  LaunchStatus.log("Making EvieClient version directory...");
+  logger.launchStatus("Making EvieClient version directory...");
   await fsPromises.mkdir(`${EvieClient}/build/versions/EvieClient`, {
     recursive: true,
   });
-  LaunchStatus.log("It exists now, I think");
-  LaunchStatus.log("Updating EvieClient launch script...");
+  logger.launchStatus("It exists now, I think");
+  logger.launchStatus("Updating EvieClient launch script...");
   const launcherJson = await axios
     .get("https://evie.pw/api/getLauncherJson")
     .then((response) => response.data);
@@ -296,18 +297,19 @@ async function PlayGame() {
     };
     const proc: Promise<ChildProcess> = launch(opts);
     proc.then((child) => {
-      LaunchStatus.log("Game Launched");
+      logger.launchStatus("Game Launched");
     });
     // console log the crash message
     (await proc).on("exit", (err) => {
-      LaunchStatus.log(err);
+      logger.launchStatus("Closed Game");
+      logger.err(`Close Code: ${err}`);
     });
   } catch (error) {
-    LaunchStatus.err("*** uh oh ***");
-    LaunchStatus.log("Game Launch Failed!");
-    LaunchStatus.err("*** uh oh ***");
+    logger.err("*** uh oh ***");
+    logger.launchStatus("Game Launch Failed!");
+    logger.err("*** uh oh ***");
 
-    LaunchStatus.err(error);
+    logger.err(error);
     return false;
   }
   return true;

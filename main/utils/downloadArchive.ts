@@ -1,12 +1,14 @@
 import axios, { AxiosResponse } from "axios";
 import { EvieClient } from "../handlers/launchGame";
-import * as LaunchStatus from "./log/LaunchStatus";
 import fs from "fs";
 import os from "os";
 import crypto from "crypto";
 import sevenBin from "7zip-bin";
 import { extract } from "node-7z";
+import { Logger } from "./log/info";
 const fsPromises = fs.promises;
+
+const logger = new Logger("downloadArchive");
 
 export default async function downloadArchive(
   url: string,
@@ -16,7 +18,7 @@ export default async function downloadArchive(
   const res: AxiosResponse = await axios.get(url, {
     responseType: "stream",
     onDownloadProgress: (progress: ProgressEvent) => {
-      LaunchStatus.log(
+      logger.launchStatus(
         `Downloading ${Math.round((progress.loaded / progress.total) * 100)}%`
       );
     },
@@ -41,13 +43,13 @@ export default async function downloadArchive(
   });
   const fileHash = hash.digest("hex");
   if (fileHash !== sha256) {
-    LaunchStatus.err(`SHA256 mismatch: ${fileHash} !== ${sha256}`);
+    logger.launchStatus(`SHA256 mismatch: ${fileHash} !== ${sha256}`);
     await fsPromises.unlink(tempFile);
     throw new Error(`SHA256 mismatch: ${fileHash} !== ${sha256}`);
   }
 
   await new Promise<void>((resolve, reject) => {
-    LaunchStatus.log("Extracting file...");
+    logger.launchStatus("Extracting file...");
     extract(tempFile, path, {
       $bin: sevenBin.path7za,
     }).on("end", () => {

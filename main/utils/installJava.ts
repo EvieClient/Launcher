@@ -1,7 +1,9 @@
 import os from "os";
 import { javaLocation } from "../handlers/launchGame";
 import downloadArchive from "./downloadArchive";
-import * as LaunchStatus from "./log/LaunchStatus";
+import { Logger } from "./log/info";
+
+const logger = new Logger("installJava");
 
 async function InstallJava() {
   try {
@@ -13,7 +15,7 @@ async function InstallJava() {
       const sha256 =
         "d270fc127296784307d76052d7acbd65c7e5dbf48c1cbdddabe3923c56ec60a0";
       const path = `${javaLocation}/jre`;
-      LaunchStatus.log("Downloading Windows JRE...");
+      logger.info("Downloading Windows JRE...");
       await downloadArchive(url, sha256, path);
     } else if (os.platform() === "darwin") {
       const url =
@@ -21,14 +23,14 @@ async function InstallJava() {
       const sha256 =
         "42d4ada88e39b0f222ffdcf3c833f442af22852687992997eca82c573e65b86f";
       const path = `${javaLocation}/jre`;
-      LaunchStatus.log("Downloading MacOS JRE...");
+      logger.info("Downloading MacOS JRE...");
       await downloadArchive(url, sha256, path);
     } else {
-      LaunchStatus.log("Unsupported OS");
+      logger.info("Unsupported OS");
       console.error("Unsupported platform");
     }
   } catch (error) {
-    LaunchStatus.err(error);
+    logger.err(error);
     return false;
   }
 }

@@ -1,5 +1,4 @@
 import electron, { app } from "electron";
-import * as bgStatus from "../utils/log/bgStatus";
 import {
   Account,
   MicrosoftAccount,
@@ -10,14 +9,17 @@ import * as fs from "fs";
 import { GameProfile } from "@xmcl/user";
 import { createWindow } from "../helpers";
 import { bgExpressServer } from "../utils/bgExpressServer";
+import { Logger } from "../utils/log/info";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
+
+const logger = new Logger("userAuth");
 
 async function signInViaMojang(username: string, password: string) {
   const account = new MojangAccount();
   try {
     await account.Login(username, password);
     await account.getProfile();
-    bgStatus.auth(`Storing new account token for ${account.username}`);
+    logger.info(`Storing new account token for ${account.username}`);
     await storeAccountToken(account);
   } catch (error) {
     console.log(error);
@@ -115,7 +117,7 @@ async function signInViaMicrosoft(integratedWindow: boolean) {
     });
     await account.authFlow(code);
     await account.getProfile();
-    bgStatus.auth(`Storing new account token for ${account.username}`);
+    logger.info(`Storing new account token for ${account.username}`);
     await storeAccountToken(account);
   } catch (e) {
     console.error(e);

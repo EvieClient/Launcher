@@ -36,18 +36,7 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.RELEASE_REPO_SECRET }}"
         run: |
-          APP_NAME=EvieLauncher
-          VERSION_NAME=Release
-          VERSION_CODE=1
-          FILENAME="Evie Client Setup 1.0.0.exe"
-          TAG="v${VERSION_NAME}-${VERSION_CODE}"
-          TAG="latest-master"
-          echo $APP_NAME
-          echo $VERSION_NAME
-          echo $VERSION_CODE
-          echo $FILENAME
-          echo $TAG
           git clone https://github.com/EvieClient/EvieClient-Releases
           cd EvieClient-Releases
-          ./../bin/hub release delete "${TAG}" || echo "Failed deleting TAG: ${TAG}" # If release got lost catch error with message
-          ./../bin/hub release create -a "../${APP_NAME}.apk" -m "Current Master Build: ${FILENAME}" -p "${TAG}"
+          ./../bin/hub release delete "latest-master"
+          ./../bin/hub release create -a "../Evie Client Setup 1.0.0.exe" -m "Current Master Build: Evie Client Setup 1.0.0.exe" -p "latest-master"

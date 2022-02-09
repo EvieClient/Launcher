@@ -18,25 +18,6 @@ jobs:
         with:
           name: EvieLauncherReleaseWin
           path: "dist/Evie Client Setup 1.0.0.exe"
-      - name: Push new version to master
-        run: |
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions"
-      - name: Get Release
-        uses: actions/download-artifact@master
-        with:
-          name: EvieLauncherReleaseWin
-      - name: Display structure of downloaded files
-        run: ls -R
-      - name: Publish
-        uses: "marvinpinto/action-automatic-releases@latest"
-        with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: false
-          title: "Latest Build"
-          files: |
-            *.exe
   MacOS:
     runs-on: macos-latest
     timeout-minutes: 60
@@ -49,16 +30,25 @@ jobs:
         with:
           name: EvieLauncherReleaseMac
           path: "dist/Evie Client-1.0.0.dmg"
-      - name: Push new version to master
+  Deploy:
+    needs:
+       - MacOS
+       - Windows
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Git Sign-In
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions"
-      - name: Get Release
+      - name: Get Mac Build
         uses: actions/download-artifact@master
         with:
           name: EvieLauncherReleaseMac
-      - name: Display structure of downloaded files
-        run: ls -R
+      - name: Get Windows Build
+        uses: actions/download-artifact@master
+        with:
+          name: EvieLauncherReleaseWin
       - name: Publish
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
@@ -68,3 +58,4 @@ jobs:
           title: "Latest Build"
           files: |
             *.dmg
+            *.exe

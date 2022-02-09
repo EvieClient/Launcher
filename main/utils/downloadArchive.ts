@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from "axios";
 import { EvieClient } from "../handlers/launchGame";
 import * as LaunchStatus from "./log/LaunchStatus";
 import fs from "fs";
+import os from "os";
 import crypto from "crypto";
 import sevenBin from "7zip-bin";
 import { extract } from "node-7z";

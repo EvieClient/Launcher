@@ -32,6 +32,9 @@ jobs:
         uses: actions/download-artifact@master
         with:
           name: EvieLauncherRelease
+      - name: Display structure of downloaded files
+        run: ls -R
+      - name: Publish
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"

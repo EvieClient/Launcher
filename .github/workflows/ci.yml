@@ -78,8 +78,8 @@ jobs:
           tag_name: latest
           body_path: ${{ steps.generate-release-changelog.outputs.changelog }}
           files: |
-            Evie Client 1.0.0.dmg
-            Evie Client 1.0.0.exe
+            /home/runner/work/EvieLauncher/EvieLauncher/Evie Client 1.0.0.dmg
+            /home/runner/work/EvieLauncher/EvieLauncher/Evie Client 1.0.0.exe
           token: ${{ secrets.EL_PAT }}
         env:
           GITHUB_REPOSITORY: EvieClient/EvieClient-Releases

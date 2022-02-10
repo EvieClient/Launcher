@@ -76,8 +76,8 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
          artifacts: "*.dmg,*.exe"
-         bodyFile: ${{ steps.generate-release-changelog.outputs.changelog }}
+         bodyFile: '/github/workspace/CHANGELOG.md'
          owner: EvieClient
          repo: EvieClient-Releases
-         token: ${{ secrets.GITHUB_TOKEN }}
+         token: ${{ GITHUB.wprl }}
          tag: "latest"

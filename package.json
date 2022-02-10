@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "nextron",
     "build": "nextron build",
-    "deploy": "electron-builder -p always",
+    "gh-publish": "electron-builder -p always",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {

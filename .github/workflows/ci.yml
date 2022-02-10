@@ -72,12 +72,13 @@ jobs:
         with:
           usernamesAsGithubLogins: true
           token: ${{ secrets.GITHUB_TOKEN }} 
-      - name: Publish
-        uses: ncipollo/release-action@v1
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-         artifacts: "*.dmg,*.exe"
-         bodyFile: ${{ steps.generate-release-changelog.outputs.changelog }}
-         owner: EvieClient
-         repo: EvieClient-Releases
-         token: ${{ secrets.EL_PAT }}
-         tag: "latest"
+          body_path: ${{ steps.generate-release-changelog.outputs.changelog }}
+          files: |
+            Evie Client 1.0.0.dmg
+            Evie Client 1.0.0.exe
+          token: ${{ secrets.EL_PAT }}
+        env:
+          GITHUB_REPOSITORY: EvieClient/EvieClient-Releases

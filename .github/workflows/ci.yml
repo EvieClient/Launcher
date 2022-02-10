@@ -79,5 +79,5 @@ jobs:
          bodyFile: '/github/workspace/CHANGELOG.md'
          owner: EvieClient
          repo: EvieClient-Releases
-         token: ${{ GITHUB.wprl }}
+         token: ${{ secrets.GITHUB_TOKEN }}
          tag: "latest"

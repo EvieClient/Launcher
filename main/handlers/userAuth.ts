@@ -1,5 +1,6 @@
 import electron, { app } from "electron";
 import {
+  account,
   Account,
   MicrosoftAccount,
   MicrosoftAuth,
@@ -13,20 +14,6 @@ import { Logger } from "../utils/log/info";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
 
 const logger = new Logger("userAuth");
-
-async function signInViaMojang(username: string, password: string) {
-  const account = new MojangAccount();
-  try {
-    await account.Login(username, password);
-    await account.getProfile();
-    logger.info(`Storing new account token for ${account.username}`);
-    await storeAccountToken(account);
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-  return account;
-}
 
 async function getAccountToken(): Promise<string | null> {
   // get the account token from the EvieDir with a file names accountinfo.private
@@ -53,9 +40,13 @@ async function getAccountGameProfile(): Promise<GameProfile | null> {
       fs.readFileSync(`${EvieDir}/accountinfo.private`, "utf8")
     );
 
+    const account = new MicrosoftAccount();
+    account.accessToken = json.token;
+    await account.getProfile();
+
     const profile: GameProfile = {
-      id: json.id,
-      name: json.name,
+      id: account.uuid,
+      name: account.username,
     };
     return profile;
   } else {
@@ -80,8 +71,6 @@ async function storeAccountToken(account: Account) {
       `${EvieDir}/accountinfo.private`,
       JSON.stringify({
         token: account.accessToken,
-        id: account.uuid,
-        name: account.username,
       })
     );
   }
@@ -126,10 +115,4 @@ async function signInViaMicrosoft(integratedWindow: boolean) {
 
 async function signOut() {}
 
-export {
-  signInViaMojang,
-  signInViaMicrosoft,
-  signOut,
-  getAccountToken,
-  getAccountGameProfile,
-};
+export { signInViaMicrosoft, signOut, getAccountToken, getAccountGameProfile };

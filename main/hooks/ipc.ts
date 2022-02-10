@@ -1,11 +1,7 @@
 import axios, { AxiosError } from "axios";
 import { mainWindow } from "../background";
 import Launch from "../handlers/launchGame";
-import {
-  signInViaMicrosoft,
-  signInViaMojang,
-  signOut,
-} from "../handlers/userAuth";
+import { signInViaMicrosoft, signOut } from "../handlers/userAuth";
 
 const ipc = require("electron").ipcMain;
 
@@ -15,10 +11,6 @@ ipc.on("launch-game", function (event, arg) {
 
 ipc.on("sign-in-via-microsoft", function (event, arg: boolean) {
   signInViaMicrosoft(arg);
-});
-
-ipc.on("sign-in-via-mojang", function (event, arg) {
-  signInViaMojang(arg.username, arg.password);
 });
 
 ipc.on("sign-out", function (event, arg) {

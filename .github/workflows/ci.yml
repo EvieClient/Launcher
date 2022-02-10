@@ -26,10 +26,10 @@ jobs:
           # If source files changed but packages didn't, rebuild from a prior cache.
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/yarn.lock') }}-
-      - name: Build Evie Launcher
+      - name: Get Dependencies
         run: yarn
       - name: Build Evie Launcher
-        run: node_modules/.bin/nextron build
+        run: yarn run build
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
@@ -52,10 +52,10 @@ jobs:
           # If source files changed but packages didn't, rebuild from a prior cache.
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/yarn.lock') }}-
-      - name: Get Deps
+      - name: Get Dependencies
         run: yarn
       - name: Build Evie Launcher
-        run: node_modules/.bin/nextron build
+        run: yarn run build
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           CSC_LINK: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}

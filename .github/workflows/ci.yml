@@ -29,7 +29,9 @@ jobs:
       - name: Build Evie Launcher
         run: yarn
       - name: Build Evie Launcher
-        run: [Environment]::SetEnvironmentVariable("GH_TOKEN","${{ secrets.GH_TOKEN }}","User") && yarn build
+        run: node_modules/.bin/nextron build
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
   MacOS:
     runs-on: macos-latest
@@ -53,7 +55,7 @@ jobs:
       - name: Get Deps
         run: yarn
       - name: Build Evie Launcher
-        run: yarn build
+        run: node_modules/.bin/nextron build
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           CSC_LINK: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}

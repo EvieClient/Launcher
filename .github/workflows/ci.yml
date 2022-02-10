@@ -29,9 +29,7 @@ jobs:
       - name: Build Evie Launcher
         run: yarn
       - name: Build Evie Launcher
-        run: yarn build
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: [Environment]::SetEnvironmentVariable("GH_TOKEN","${{ secrets.GH_TOKEN }}","User") && yarn build
 
   MacOS:
     runs-on: macos-latest

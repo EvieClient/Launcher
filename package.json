@@ -11,6 +11,24 @@
     "gh-publish": "electron-builder -p always",
     "postinstall": "electron-builder install-app-deps"
   },
+  "build": {
+    "appId": "pw.evie.EvieLauncher",
+    "productName": "Evie Client",
+    "directories": {
+      "output": "build",
+      "buildResources": "resources"
+    },
+    "files": [
+      "app/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "EvieClient",
+        "repo": "EvieClient-Releases"
+      }
+    ]
+  },
   "dependencies": {
     "7zip-bin": "^5.1.1",
     "@headlessui/react": "^1.4.3",

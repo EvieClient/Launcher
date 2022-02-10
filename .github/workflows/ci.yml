@@ -26,9 +26,15 @@ jobs:
           # If source files changed but packages didn't, rebuild from a prior cache.
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/yarn.lock') }}-
+      - name: Test Env Vars
+        shell: bash
+        run: yarn run test-env-vars
+        env:
+          TEST_ENV: "nice!"
       - name: Get Dependencies
         run: yarn
       - name: Build Evie Launcher
+        shell: bash
         run: yarn run build
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -55,6 +61,7 @@ jobs:
       - name: Get Dependencies
         run: yarn
       - name: Build Evie Launcher
+        shell: bash
         run: yarn run build
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

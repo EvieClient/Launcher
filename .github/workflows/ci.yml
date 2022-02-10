@@ -11,11 +11,15 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        shell: bash
+        run: echo "::set-output name=dir::$(yarn cache dir)"
       - uses: actions/cache@v2
         with:
           # See here for caching with `yarn` https://github.com/actions/cache/blob/main/examples.md#node---yarn or you can leverage caching with actions/setup-node https://github.com/actions/setup-node
           path: |
-            ~/.npm
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
             ${{ github.workspace }}/.next/cache
           # Generate a new cache whenever packages or source files change.
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
@@ -24,62 +28,41 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
       - name: Build Evie Launcher
         run: yarn && yarn build --win
-      - name: Upload Release
-        uses: actions/upload-artifact@master
-        with:
-          name: EvieLauncherReleaseWin
-          path: "dist/Evie Client Setup 1.0.0.exe"
+      - name: "Release"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: yarn deploy
+
   MacOS:
     runs-on: macos-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
       - uses: actions/cache@v2
         with:
           # See here for caching with `yarn` https://github.com/actions/cache/blob/main/examples.md#node---yarn or you can leverage caching with actions/setup-node https://github.com/actions/setup-node
           path: |
-            ~/.npm
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
             ${{ github.workspace }}/.next/cache
           # Generate a new cache whenever packages or source files change.
           key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
           # If source files changed but packages didn't, rebuild from a prior cache.
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+      - name: Get Deps
+        run: yarn
       - name: Build Evie Launcher
-        run: yarn && yarn build
-      - name: Upload Release
-        uses: actions/upload-artifact@master
-        with:
-          name: EvieLauncherReleaseMac
-          path: "dist/Evie Client-1.0.0.dmg"
-  Deploy:
-    needs:
-       - MacOS
-       - Windows
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Get Mac Build
-        uses: actions/download-artifact@master
-        with:
-          name: EvieLauncherReleaseMac
-      - name: Get Windows Build
-        uses: actions/download-artifact@master
-        with:
-          name: EvieLauncherReleaseWin
-      - name: "Generate release changelog"
-        uses: heinrichreimer/github-changelog-generator-action@v2.3
-        with:
-          usernamesAsGithubLogins: true
-          token: ${{ secrets.GITHUB_TOKEN }} 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: latest
-          body_path: ${{ steps.generate-release-changelog.outputs.changelog }}
-          files: |
-            /home/runner/work/EvieLauncher/EvieLauncher/Evie Client 1.0.0.dmg
-            /home/runner/work/EvieLauncher/EvieLauncher/Evie Client 1.0.0.exe
-          token: ${{ secrets.EL_PAT }}
+        run: yarn build
         env:
-          GITHUB_REPOSITORY: EvieClient/EvieClient-Releases
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          CSC_LINK: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      - name: "Release"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: yarn deploy

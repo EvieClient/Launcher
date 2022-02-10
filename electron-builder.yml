@@ -1,4 +1,4 @@
-appId: com.tristancamejo.evielauncher
+appId: pw.evie.evielauncher
 productName: Evie Client
 directories:
   output: dist
@@ -8,4 +8,5 @@ files:
     filter:
       - package.json
       - app
-publish: null
+publish:
+  - github

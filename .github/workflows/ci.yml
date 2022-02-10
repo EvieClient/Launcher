@@ -79,5 +79,5 @@ jobs:
          bodyFile: ${{ steps.generate-release-changelog.outputs.changelog }}
          owner: EvieClient
          repo: EvieClient-Releases
-         token: ${{ secrets.GITHUB_TOKEN }}
+         token: ${{ secrets.EL_PAT }}
          tag: "latest"

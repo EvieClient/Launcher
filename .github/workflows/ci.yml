@@ -75,6 +75,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: latest
           body_path: ${{ steps.generate-release-changelog.outputs.changelog }}
           files: |
             Evie Client 1.0.0.dmg

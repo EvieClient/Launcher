@@ -68,12 +68,11 @@ jobs:
         with:
           name: EvieLauncherReleaseWin
       - name: Publish
-        uses: "marvinpinto/action-automatic-releases@latest"
+        uses: ncipollo/release-action@v1
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: false
-          title: "Latest Build"
-          files: |
-            *.dmg
-            *.exe
+         artifacts: "*.dmg,*.exe"
+         bodyFile: ${{ github.workspace }}-CHANGELOG.txt
+         owner: EvieClient
+         repo: EvieClient-Releases
+         token: ${{ secrets.GITHUB_TOKEN }}
+         tag: "latest"

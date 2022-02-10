@@ -67,7 +67,7 @@ jobs:
         uses: actions/download-artifact@master
         with:
           name: EvieLauncherReleaseWin
-      - name: "✏️ Generate release changelog"
+      - name: "Generate release changelog"
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
           usernamesAsGithubLogins: true
@@ -76,7 +76,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
          artifacts: "*.dmg,*.exe"
-         bodyFile: '/github/workspace/CHANGELOG.md'
+         bodyFile: ${{ steps.generate-release-changelog.outputs.changelog }}
          owner: EvieClient
          repo: EvieClient-Releases
          token: ${{ secrets.GITHUB_TOKEN }}

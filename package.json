@@ -9,8 +9,7 @@
     "dev": "nextron",
     "build": "nextron build",
     "deploy": "electron-builder -p always",
-    "postinstall": "electron-builder install-app-deps",
-    "test-env-vars": "echo 'The TEST_ENV Var is set to: ${TEST_ENV}'"
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "7zip-bin": "^5.1.1",

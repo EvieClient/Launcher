@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/dist/client/router";
 import React from "react";
 const navigation = [
-  { name: "Home", href: "/", current: false },
+  { name: "Home", href: "/home", current: false },
   { name: "Servers", href: "#", current: false },
   { name: "Store", href: "#", current: false },
   { name: "About", href: "/about", current: false },

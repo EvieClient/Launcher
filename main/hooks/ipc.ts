@@ -2,7 +2,11 @@ import axios, { AxiosError } from "axios";
 import electron from "electron";
 import { mainWindow } from "../background";
 import Launch from "../handlers/launchGame";
-import { signInViaMicrosoft, signOut } from "../handlers/userAuth";
+import {
+  getAccountGameProfile,
+  signInViaMicrosoft,
+  signOut,
+} from "../handlers/userAuth";
 import * as pkg from "../../package.json";
 
 const ipc = require("electron").ipcMain;
@@ -25,6 +29,23 @@ ipc.on("fetch-versions", function (event, arg) {
     chromeVersion: electron.app.getVersion(),
     electronVersion: process.versions.electron,
   });
+});
+
+ipc.on("fetch-user-info", async function (event, arg) {
+  try {
+    const profile = await getAccountGameProfile();
+    mainWindow.webContents.send("fetch-user-info-reply", {
+      id: profile.profile.id,
+      name: profile.profile.name,
+      valid: true,
+    });
+  } catch (e) {
+    mainWindow.webContents.send("fetch-user-info-reply", {
+      id: "",
+      name: "",
+      valid: false,
+    });
+  }
 });
 
 ipc.on("fetch-news", async function (event, arg) {

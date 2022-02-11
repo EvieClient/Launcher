@@ -1,0 +1,12 @@
+.nav {
+  background: white;
+  height: 2em;
+}
+.content {
+  opacity: 0;
+  transition: 1s;
+}
+
+.fadeIn {
+  opacity: 1;
+}

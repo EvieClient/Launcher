@@ -1,49 +1,57 @@
 import React from "react";
+import type { AppProps } from "next/app";
 import Head from "next/head";
-import Nav from "../components/nav";
-import Launch from "../components/launch";
-import News from "../components/news";
+import electron from "electron";
+import { UserInfo } from "../../types";
+import Loading from "../components/Loading";
+import TransitionLayout from "../components/Layout";
 
-function Home() {
+function EvieClient({ Component, pageProps }: AppProps) {
+  const ipcRenderer = electron.ipcRenderer;
+
+  ipcRenderer?.on("fetch-user-info-reply", (event, userInfo: UserInfo) => {
+    if (userInfo.valid) {
+      setStatus(
+        <>
+          Welcome back, <span className="font-semibold">{userInfo.name}</span>
+        </>
+      );
+      setUserInfo(userInfo);
+      setTimeout(() => {
+        window.location.href = "/home";
+        setLoading(false);
+      }, 1500);
+    } else {
+      setStatus(
+        <>
+          Welcome to <span className="font-semibold">EvieClient</span>
+        </>
+      );
+      setTimeout(() => {
+        window.location.href = "/login";
+        setLoading(false);
+      }, 1500);
+    }
+  });
+
+  const [userInfo, setUserInfo] = React.useState<UserInfo>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [status, setStatus] = React.useState(<>Loading...</>);
+
+  React.useEffect(() => {
+    ipcRenderer.send("fetch-user-info");
+  }, []);
+
   return (
     <React.Fragment>
-      <div>
-        <div>
-          <Nav />
-        </div>
-        <main className="page lanidng-page">
-          <Launch />
-        </main>
-        <div>
-          <div className="container mx-auto sm:px-4">
-            <h2
-              style={{
-                marginTop: "52px",
-                marginLeft: "34px",
-                fontFamily: '"Open Sans", sans-serif',
-                fontSize: "22px",
-                fontWeight: 800,
-                lineHeight: "32px",
-                color: "rgb(0,0,0)",
-              }}
-            />
-            <div className="news">
-              <p
-                style={{
-                  marginLeft: "34px",
-                  color: "rgba(255,255,255,0.5)",
-                  fontSize: "14px",
-                }}
-              />
-            </div>
-            <div className="flex flex-wrap ">
-              <News />
-            </div>
-          </div>
-        </div>
-      </div>
+      <TransitionLayout>
+        <Head>
+          <title>Evie Client</title>
+        </Head>
+        {loading ? <Loading text={status} /> : <Component {...pageProps} />}
+      </TransitionLayout>
     </React.Fragment>
   );
 }
 
-export default Home;
+export default EvieClient;

@@ -1,11 +1,5 @@
-import {
-  getVersionList,
-  install,
-  MinecraftVersion,
-  installDependencies,
-  installForge,
-} from "@xmcl/installer";
-import { LaunchOption, Version, launch } from "@xmcl/core";
+import { getVersionList, install, MinecraftVersion } from "@xmcl/installer";
+import { LaunchOption, launch } from "@xmcl/core";
 import sevenBin from "7zip-bin";
 import { extract } from "node-7z";
 import { app } from "electron";
@@ -14,7 +8,7 @@ import { ChildProcess } from "node:child_process";
 import fs from "fs";
 const fsPromises = fs.promises;
 import axios, { AxiosError } from "axios";
-import { getAccountGameProfile, getAccountToken } from "./userAuth";
+import { getAccountGameProfile } from "./userAuth";
 import InstallJava from "../utils/installJava";
 import os from "os";
 import { Logger } from "../utils/log/info";
@@ -256,6 +250,8 @@ async function UpdateEvieClient() {
 }
 
 async function PlayGame() {
+  logger.launchStatus("Fetching Account...");
+  const account = await getAccountGameProfile();
   // install 1.8.9
   logger.launchStatus("Finding 1.8.9...");
   const list: MinecraftVersion[] = (await getVersionList()).versions;
@@ -292,8 +288,8 @@ async function PlayGame() {
             }`
           : "/Users/tristan/Library/Application Support/minecraft/runtime/jre-legacy/mac-os/jre-legacy/jre.bundle/Contents/Home/bin/java",
       gamePath: `${EvieClient}/build`,
-      gameProfile: await getAccountGameProfile(),
-      accessToken: await getAccountToken(),
+      gameProfile: account.profile,
+      accessToken: account.accessToken,
       extraExecOption: {
         detached: true,
       },

@@ -10,7 +10,7 @@ function LoginForm() {
         <a
           onClick={() => {
             const ipcRenderer = electron.ipcRenderer;
-            ipcRenderer.send("sign-in-via-microsoft");
+            ipcRenderer.send("sign-in-via-microsoft", true);
           }}
         >
           <img

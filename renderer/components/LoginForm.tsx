@@ -1,4 +1,5 @@
 import electron from "electron";
+import React from "react";
 
 function LoginForm() {
   return (

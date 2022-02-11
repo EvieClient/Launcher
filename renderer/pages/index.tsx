@@ -7,9 +7,6 @@ import News from "../components/news";
 function Home() {
   return (
     <React.Fragment>
-      <Head>
-        <title>EvieLauncher</title>
-      </Head>
       <div>
         <div>
           <Nav />

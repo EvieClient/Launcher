@@ -11,9 +11,6 @@ import electron from "electron";
 function Login() {
   return (
     <React.Fragment>
-      <Head>
-        <title>EvieLauncher</title>
-      </Head>
       <div>
         <div>
           <Nav />

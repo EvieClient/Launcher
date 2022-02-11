@@ -1,7 +1,9 @@
 import axios, { AxiosError } from "axios";
+import electron from "electron";
 import { mainWindow } from "../background";
 import Launch from "../handlers/launchGame";
 import { signInViaMicrosoft, signOut } from "../handlers/userAuth";
+import * as pkg from "../../package.json";
 
 const ipc = require("electron").ipcMain;
 
@@ -15,6 +17,14 @@ ipc.on("sign-in-via-microsoft", function (event, arg: boolean) {
 
 ipc.on("sign-out", function (event, arg) {
   signOut();
+});
+
+ipc.on("fetch-versions", function (event, arg) {
+  mainWindow.webContents.send("fetch-versions-reply", {
+    version: pkg.version,
+    chromeVersion: electron.app.getVersion(),
+    electronVersion: process.versions.electron,
+  });
 });
 
 ipc.on("fetch-news", async function (event, arg) {

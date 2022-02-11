@@ -41,8 +41,13 @@ async function getAccountGameProfile(): Promise<GameProfile | null> {
     );
 
     const account = new MicrosoftAccount();
-    account.accessToken = json.token;
-    await account.getProfile();
+    account.accessToken = json.accessToken;
+    account.refreshToken = json.refreshToken;
+    try {
+      await account.getProfile();
+    } catch {
+      throw new Error("Account Token Invalid!");
+    }
 
     const profile: GameProfile = {
       id: account.uuid,
@@ -54,7 +59,7 @@ async function getAccountGameProfile(): Promise<GameProfile | null> {
   }
 }
 
-async function storeAccountToken(account: Account) {
+async function storeAccountToken(account: MicrosoftAccount) {
   // store the account token in the EvieDir with a file names accountinfo.private
   // this is a json file that contains the account token
   // the account token is used to authenticate with the minecraft server
@@ -70,7 +75,8 @@ async function storeAccountToken(account: Account) {
     fs.writeFileSync(
       `${EvieDir}/accountinfo.private`,
       JSON.stringify({
-        token: account.accessToken,
+        accessToken: account.accessToken,
+        refreshToken: account.refreshToken,
       })
     );
   }

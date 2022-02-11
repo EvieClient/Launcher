@@ -2,16 +2,34 @@ import { Fragment } from "react";
 import { Disclosure, Menu, Transition } from "@headlessui/react";
 import { BellIcon, MenuIcon, XIcon } from "@heroicons/react/outline";
 import Link from "next/link";
+import { useRouter } from "next/dist/client/router";
+import React from "react";
 const navigation = [
-  { name: "Home", href: "/", current: true },
+  { name: "Home", href: "/", current: false },
   { name: "Servers", href: "#", current: false },
   { name: "Store", href: "#", current: false },
+  { name: "About", href: "/about", current: false },
 ];
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 function Nav() {
+  const router = useRouter();
+
+  React.useEffect(() => {
+    // get current router path and set it as the only nav item active
+    const currentPath = router.pathname;
+    const currentNavItem = navigation.find(
+      (navItem) => navItem.href === currentPath
+    );
+    if (currentNavItem) {
+      currentNavItem.current = true;
+    } else {
+      navigation[0].current = true;
+    }
+  }, [router.pathname]);
+
   return (
     <Disclosure as="nav" className="bg-gray-800">
       {({ open }) => (

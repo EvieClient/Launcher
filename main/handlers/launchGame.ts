@@ -285,9 +285,12 @@ async function PlayGame() {
   try {
     const opts: LaunchOption = {
       version: "EvieClient",
-      javaPath: `${javaLocation}/jre/${
-        os.platform() === "win32" ? "java.exe" : "java"
-      }`,
+      javaPath:
+        os.platform() === "win32"
+          ? `${javaLocation}/jre/${
+              os.platform() === "win32" ? "java.exe" : "java"
+            }`
+          : "/Users/tristan/Library/Application Support/minecraft/runtime/jre-legacy/mac-os/jre-legacy/jre.bundle/Contents/Home/bin/java",
       gamePath: `${EvieClient}/build`,
       gameProfile: await getAccountGameProfile(),
       accessToken: await getAccountToken(),

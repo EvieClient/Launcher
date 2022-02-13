@@ -10,7 +10,7 @@ const fsPromises = fs.promises;
 import axios, { AxiosError } from "axios";
 import { getAccountGameProfile } from "./userAuth";
 import InstallJava from "../utils/installJava";
-import os from "os";
+import os, { EOL } from "os";
 import { Logger } from "../utils/log/info";
 
 /*
@@ -282,23 +282,36 @@ async function PlayGame() {
     const opts: LaunchOption = {
       version: "EvieClient",
       javaPath:
-        os.platform() === "win32"
-          ? `${javaLocation}/jre/${
-              os.platform() === "win32" ? "java.exe" : "java"
-            }`
-          : "/Users/tristan/Library/Application Support/minecraft/runtime/jre-legacy/mac-os/jre-legacy/jre.bundle/Contents/Home/bin/java",
+        "C:/Program Files (x86)/Minecraft Launcher/runtime/jre-legacy/windows-x64/jre-legacy/bin/java.exe",
       gamePath: `${EvieClient}/build`,
       gameProfile: account.profile,
       accessToken: account.accessToken,
+      minMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
+      maxMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
       extraExecOption: {
         detached: true,
       },
+      extraJVMArgs:
+        `-XX:+UseG1GC -Dsun.rmi.dgc.server.gcInterval=2147483646 -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=25 -XX:G1HeapRegionSize=32M`.split(
+          " "
+        ),
     };
     const proc: Promise<ChildProcess> = launch(opts);
     proc.then((child) => {
       logger.launchStatus("Game Launched");
     });
     // console log the crash message
+
+    (await proc).stderr?.on("data", (buf: any) => {
+      console.log(...buf.toString().split(EOL));
+    });
+    (await proc).stdout?.on("data", (buf: any) => {
+      console.log(...buf.toString().split(EOL));
+    });
+    (await proc).stdin?.on("data", (buf: any) => {
+      console.log(...buf.toString().split(EOL));
+    });
+
     (await proc).on("exit", (err) => {
       logger.launchStatus("Closed Game");
       logger.err(`Close Code: ${err}`);

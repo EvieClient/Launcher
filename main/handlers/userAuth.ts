@@ -12,6 +12,7 @@ import { createWindow } from "../helpers";
 import { bgExpressServer } from "../utils/bgExpressServer";
 import { Logger } from "../utils/log/info";
 import axios from "axios";
+import { mainWindow } from "../background";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
 
 const logger = new Logger("userAuth");
@@ -147,11 +148,16 @@ async function signInViaMicrosoft(integratedWindow: boolean) {
       });
 
     logger.info(`${account.username} signed in!`);
+    mainWindow.webContents.send("go-home");
   } catch (e) {
     console.error(e);
   }
 }
 
-async function signOut() {}
+async function signOut() {
+  if (fs.existsSync(`${EvieDir}/accountinfo.private`)) {
+    await fs.promises.unlink(`${EvieDir}/accountinfo.private`);
+  }
+}
 
 export { signInViaMicrosoft, signOut, getAccountGameProfile };

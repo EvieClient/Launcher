@@ -5,9 +5,11 @@ import electron from "electron";
 import { UserInfo } from "../../types";
 import Loading from "../components/Loading";
 import TransitionLayout from "../components/Layout";
+import { useRouter } from "next/dist/client/router";
 
 function EvieClient({ Component, pageProps }: AppProps) {
   const ipcRenderer = electron.ipcRenderer;
+  const router = useRouter();
 
   ipcRenderer?.on("fetch-user-info-reply", (event, userInfo: UserInfo) => {
     if (userInfo.valid) {
@@ -18,7 +20,7 @@ function EvieClient({ Component, pageProps }: AppProps) {
       );
       setUserInfo(userInfo);
       setTimeout(() => {
-        window.location.href = "/home";
+        router.push("/home");
         setLoading(false);
       }, 1500);
     } else {
@@ -28,7 +30,7 @@ function EvieClient({ Component, pageProps }: AppProps) {
         </>
       );
       setTimeout(() => {
-        window.location.href = "/login";
+        router.push("/login");
         setLoading(false);
       }, 1500);
     }

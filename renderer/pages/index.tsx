@@ -50,7 +50,7 @@ function EvieClient({ Component, pageProps }: AppProps) {
         <Head>
           <title>Evie Client</title>
         </Head>
-        {loading ? <Loading text={status} /> : <Component {...pageProps} />}
+        <Loading text={status} />
       </TransitionLayout>
     </React.Fragment>
   );

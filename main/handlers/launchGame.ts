@@ -97,8 +97,8 @@ async function UpdateEvieClient() {
     const update = new Promise<void>(async (resolve, reject) => {
       logger.launchStatus("Getting Evie Mixins...");
       const storage = getStorage();
-      await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0_obf.jar")).then(
-        async (url) => {
+      await getDownloadURL(ref(storage, "1.8/EvieClient-1.0.0_obf.jar"))
+        .then(async (url) => {
           logger.launchStatus("Downloading Evie mixins...");
           await axios
             .get(url, {
@@ -129,109 +129,109 @@ async function UpdateEvieClient() {
             .catch((error: AxiosError) => {
               logger.err(error);
             });
-        }
-      );
-
-      logger.launchStatus("Checking if OptiFine is installed...");
-      if (
-        !fs.existsSync(
-          `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
-        )
-      ) {
-        logger.launchStatus("OptiFine is not installed, installing...");
-      } else if (
-        !fs.existsSync(
-          `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
-        )
-      ) {
-        logger.launchStatus("OptiFine is not installed, installing...");
-      } else {
-        logger.launchStatus("OptiFine is installed, not skipping...");
-        // return resolve(); TODO: Fix the bug where the game doesn't launch if I don't update OptiFine every launch...
-      }
-
-      /*
-       * Download OptiFine
-       */
-      logger.launchStatus("Fetching OptiFine Download URL...");
-
-      // To download OptiFine, we need to get the download URL from the optifine.net website as the url is not static and changes every time
-      // Firstly request http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar then parse the html to get the download link for the OptiFine jar
-      await axios
-        .get("http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar", {
-          onDownloadProgress: (e: ProgressEvent) => {
-            logger.launchStatus(
-              `Getting OptiFine Download URL: ${Math.round(
-                (e.loaded / e.total) * 100
-              )}%`
-            );
-          },
         })
-        .then(async (response) => {
-          const html = response.data;
-          // the download link is in the html as a a href link it looks like this <a href='downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=key' onclick='onDownload()'>OptiFine 1.8.9 HD U M5</a>
-          logger.launchStatus("Looking for download link...");
-          const downloadLink = html.match(
-            /<a href='downloadx\?f=OptiFine_1.8.9_HD_U_M5.jar&x=(.*?)'/
-          )[1];
-          // now we can request the download link and pipe it to the file
-          logger.launchStatus(
-            `Downloading OptiFine from https://optifine.net/downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=${downloadLink}...`
-          );
-          await axios
-            .get(
-              //https://optifine.net/downloadx?f=OptiFine_1.9.0_HD_U_I5.jar&x=example
-              `https://optifine.net/downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=${downloadLink}`,
-              {
-                responseType: "stream",
-                onDownloadProgress: (e: ProgressEvent) => {
-                  logger.launchStatus(
-                    `Downloading OptiFine: ${Math.round(
-                      (e.loaded / e.total) * 100
-                    )}%`
-                  );
-                },
-              }
+        .then(async () => {
+          logger.launchStatus("Checking if OptiFine is installed...");
+          if (
+            !fs.existsSync(
+              `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
             )
+          ) {
+            logger.launchStatus("OptiFine is not installed, installing...");
+          } else if (
+            !fs.existsSync(
+              `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
+            )
+          ) {
+            logger.launchStatus("OptiFine is not installed, installing...");
+          } else {
+            logger.launchStatus("OptiFine is installed, skipping...");
+            //return; //TODO: Fix the bug where the game doesn't launch if I don't update OptiFine every launch...
+          }
+
+          /*
+           * Download OptiFine
+           */
+          logger.launchStatus("Fetching OptiFine Download URL...");
+
+          // To download OptiFine, we need to get the download URL from the optifine.net website as the url is not static and changes every time
+          // Firstly request http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar then parse the html to get the download link for the OptiFine jar
+          await axios
+            .get("http://optifine.net/adloadx?f=OptiFine_1.8.9_HD_U_M5.jar", {
+              onDownloadProgress: (e: ProgressEvent) => {
+                logger.launchStatus(
+                  `Getting OptiFine Download URL: ${Math.round(
+                    (e.loaded / e.total) * 100
+                  )}%`
+                );
+              },
+            })
             .then(async (response) => {
-              logger.launchStatus("Saving OptiFine...");
-              await response.data.pipe(
-                fs
-                  .createWriteStream(
-                    `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`
-                  )
-                  .on("finish", async () => {
-                    logger.launchStatus("OptiFine Saved");
-                    // now that we have the jar, we have to move it to EvieClient/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar
-                    // and inside the jar we need to get launchwrapper-of-2.2.jar and move it to EvieClient/build/libraries/optifine/launcherwrapper-of/2.2/launchwrapper-of-2.2.jar
-                    // we can do this by using node-7z to extract the jar in the temp folder and then move the files to the correct folders
-                    logger.launchStatus("Extracting OptiFine...");
-                    await fsPromises.mkdir(
-                      `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
-                      {
-                        recursive: true,
-                      }
-                    );
-                    extract(
-                      `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
-                      `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
-                      {
-                        $bin: pathTo7zip,
-                      }
-                    ).on("end", async () => {
-                      logger.launchStatus("Moving OptiFine...");
-                      await fsPromises.rename(
-                        `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5/launchwrapper-of-2.2.jar`,
-                        `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
-                      );
-                      await fsPromises.rename(
-                        `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
-                        `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
-                      );
-                      resolve();
-                    });
-                  })
+              const html = response.data;
+              // the download link is in the html as a a href link it looks like this <a href='downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=key' onclick='onDownload()'>OptiFine 1.8.9 HD U M5</a>
+              logger.launchStatus("Looking for download link...");
+              const downloadLink = html.match(
+                /<a href='downloadx\?f=OptiFine_1.8.9_HD_U_M5.jar&x=(.*?)'/
+              )[1];
+              // now we can request the download link and pipe it to the file
+              logger.launchStatus(
+                `Downloading OptiFine from https://optifine.net/downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=${downloadLink}...`
               );
+              await axios
+                .get(
+                  //https://optifine.net/downloadx?f=OptiFine_1.9.0_HD_U_I5.jar&x=example
+                  `https://optifine.net/downloadx?f=OptiFine_1.8.9_HD_U_M5.jar&x=${downloadLink}`,
+                  {
+                    responseType: "stream",
+                    onDownloadProgress: (e: ProgressEvent) => {
+                      logger.launchStatus(
+                        `Downloading OptiFine: ${Math.round(
+                          (e.loaded / e.total) * 100
+                        )}%`
+                      );
+                    },
+                  }
+                )
+                .then(async (response) => {
+                  logger.launchStatus("Saving OptiFine...");
+                  await response.data.pipe(
+                    fs
+                      .createWriteStream(
+                        `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`
+                      )
+                      .on("finish", async () => {
+                        logger.launchStatus("OptiFine Saved");
+                        // now that we have the jar, we have to move it to EvieClient/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine_1.8.9_HD_U_M5.jar
+                        // and inside the jar we need to get launchwrapper-of-2.2.jar and move it to EvieClient/build/libraries/optifine/launcherwrapper-of/2.2/launchwrapper-of-2.2.jar
+                        // we can do this by using node-7z to extract the jar in the temp folder and then move the files to the correct folders
+                        logger.launchStatus("Extracting OptiFine...");
+                        await fsPromises.mkdir(
+                          `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
+                          {
+                            recursive: true,
+                          }
+                        );
+                        extract(
+                          `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
+                          `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
+                          {
+                            $bin: pathTo7zip,
+                          }
+                        ).on("end", async () => {
+                          logger.launchStatus("Moving OptiFine...");
+                          await fsPromises.rename(
+                            `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5/launchwrapper-of-2.2.jar`,
+                            `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
+                          );
+                          await fsPromises.rename(
+                            `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
+                            `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
+                          );
+                          resolve();
+                        });
+                      })
+                  );
+                });
             })
             .catch((error: AxiosError) => {
               logger.err(error);
@@ -265,7 +265,7 @@ async function PlayGame() {
 
   // Make sure the EvieClient version directory exists
   logger.launchStatus("Making EvieClient version directory...");
-  await fsPromises.mkdir(`${EvieClient}/build/versions/EvieClient`, {
+  await fsPromises.mkdir(`${EvieClient}/build/versions/Evie`, {
     recursive: true,
   });
   logger.launchStatus("It exists now, I think");
@@ -274,20 +274,20 @@ async function PlayGame() {
     .get("https://evie.pw/api/getLauncherJson")
     .then((response) => response.data);
   await fsPromises.writeFile(
-    `${EvieClient}/build/versions/EvieClient/EvieClient.json`,
+    `${EvieClient}/build/versions/Evie/Evie.json`,
     JSON.stringify(launcherJson, null, 2)
   );
 
   try {
     const opts: LaunchOption = {
-      version: "EvieClient",
+      version: "Evie",
       javaPath:
-        "C:/Program Files (x86)/Minecraft Launcher/runtime/jre-legacy/windows-x64/jre-legacy/bin/java.exe",
+        "/Users/tristan/Library/Application Support/minecraft/runtime/jre-legacy/mac-os/jre-legacy/jre.bundle/Contents/Home/bin/java",
       gamePath: `${EvieClient}/build`,
       gameProfile: account.profile,
       accessToken: account.accessToken,
-      minMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
-      maxMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
+      // minMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
+      // maxMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
       extraExecOption: {
         detached: true,
       },

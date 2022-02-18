@@ -1,35 +1,26 @@
-import { Fragment } from "react";
+import { Fragment, useEffect } from "react";
 import { Disclosure, Menu, Transition } from "@headlessui/react";
 import { BellIcon, MenuIcon, XIcon } from "@heroicons/react/outline";
 import Link from "next/link";
-import { useRouter } from "next/dist/client/router";
 import React from "react";
 import electron from "electron";
+import News from "./News";
+import About from "./About";
 const navigation = [
-  { name: "Home", href: "/home", current: false },
-  { name: "Servers", href: "#", current: false },
-  { name: "Store", href: "#", current: false },
-  { name: "About", href: "/about", current: false },
+  { name: "Home", component: <News /> },
+  { name: "About", component: <About /> },
 ];
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
-function Nav() {
-  const router = useRouter();
-
+function Nav(props: {
+  setCurrentTab: React.Dispatch<React.SetStateAction<JSX.Element>>;
+  currentTab: React.ReactNode;
+}) {
   React.useEffect(() => {
-    // get current router path and set it as the only nav item active
-    const currentPath = router.pathname;
-    const currentNavItem = navigation.find(
-      (navItem) => navItem.href === currentPath
-    );
-    if (currentNavItem) {
-      currentNavItem.current = true;
-    } else {
-      navigation[0].current = true;
-    }
-  }, [router.pathname]);
+    props.setCurrentTab(<News />);
+  }, []);
 
   return (
     <Disclosure as="nav" className="bg-gray-800">
@@ -55,19 +46,21 @@ function Nav() {
                 <div className="hidden sm:block sm:ml-6">
                   <div className="flex space-x-4">
                     {navigation.map((item) => (
-                      <Link href={item.href} key={item.name}>
-                        <a
-                          className={classNames(
-                            item.current
-                              ? "bg-gray-900 text-white"
-                              : "text-gray-300 hover:bg-gray-700 hover:text-white",
-                            "px-3 py-2 rounded-md text-sm font-medium"
-                          )}
-                          aria-current={item.current ? "page" : undefined}
-                        >
-                          {item.name}
-                        </a>
-                      </Link>
+                      <a
+                        key={item.name}
+                        onClick={(e) => {
+                          console.log(`Changing Tab to ${item.component}`);
+                          props.setCurrentTab(item.component);
+                        }}
+                        className={classNames(
+                          props.currentTab == item.component
+                            ? "bg-gray-900 text-white"
+                            : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                          "px-3 py-2 rounded-md text-sm font-medium"
+                        )}
+                      >
+                        {item.name}
+                      </a>
                     ))}
                   </div>
                 </div>
@@ -147,14 +140,19 @@ function Nav() {
                 <Disclosure.Button
                   key={item.name}
                   as="a"
-                  href={item.href}
+                  onClick={(e) => {
+                    console.log(`Changing Tab to ${item.component}`);
+                    props.setCurrentTab(item.component);
+                  }}
                   className={classNames(
-                    item.current
+                    props.currentTab == item.component
                       ? "bg-gray-900 text-white"
                       : "text-gray-300 hover:bg-gray-700 hover:text-white",
                     "block px-3 py-2 rounded-md text-base font-medium"
                   )}
-                  aria-current={item.current ? "page" : undefined}
+                  aria-current={
+                    props.currentTab == item.component ? "page" : undefined
+                  }
                 >
                   {item.name}
                 </Disclosure.Button>

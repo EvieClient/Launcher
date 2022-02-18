@@ -3,9 +3,7 @@ import Nav from "../components/nav";
 import Launch from "../components/launch";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
-import CardActions from "@mui/material/CardActions";
 import CardContent from "@mui/material/CardContent";
-import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import electron from "electron";
 
@@ -38,7 +36,7 @@ type EvieVersions = {
   chromeVersion: string;
 };
 
-function Home() {
+function About() {
   const [versionInfo, setVersionInfo] = React.useState<EvieVersions>(null);
 
   electron.ipcRenderer?.on("fetch-versions-reply", (event, arg) => {
@@ -49,36 +47,23 @@ function Home() {
     electron.ipcRenderer?.send("fetch-versions");
   }, []);
   return (
-    <React.Fragment>
-      <div>
-        <div>
-          <Nav />
-        </div>
-        <main className="page lanidng-page">
-          <Launch />
-        </main>
-        <div>
-          <div className="container mx-auto sm:px-4">
-            <br />
-            <div className="flex items-center">
-              <Info
-                title="Evie Launcher Version"
-                description={`${versionInfo?.version}`}
-              />
-              <Info
-                title="Electron Version"
-                description={`${versionInfo?.electronVersion}`}
-              />
-              <Info
-                title="Chrome Version"
-                description={`${versionInfo?.chromeVersion}`}
-              />
-            </div>
-          </div>
-        </div>
+    <div className="container mx-auto sm:px-4">
+      <br />
+      <div className="flex items-center">
+        <Info
+          title="Evie Launcher Version"
+          description={`${versionInfo?.version}`}
+        />
+        <Info
+          title="Electron Version"
+          description={`${versionInfo?.electronVersion}`}
+        />
+        <Info
+          title="Chrome Version"
+          description={`${versionInfo?.chromeVersion}`}
+        />
       </div>
-    </React.Fragment>
+    </div>
   );
 }
-
-export default Home;
+export default About;

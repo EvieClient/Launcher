@@ -7,7 +7,6 @@ import {
   signInViaMicrosoft,
   signOut,
 } from "../handlers/userAuth";
-import * as pkg from "../../package.json";
 
 const ipc = require("electron").ipcMain;
 
@@ -25,8 +24,8 @@ ipc.on("sign-out", function (event, arg) {
 
 ipc.on("fetch-versions", function (event, arg) {
   mainWindow.webContents.send("fetch-versions-reply", {
-    version: pkg.version,
-    chromeVersion: electron.app.getVersion(),
+    version: electron.app.getVersion(),
+    chromeVersion: process.versions["chrome"],
     electronVersion: process.versions.electron,
   });
 });

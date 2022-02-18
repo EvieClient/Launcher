@@ -12,6 +12,7 @@ import { getAccountGameProfile } from "./userAuth";
 import InstallJava from "../utils/installJava";
 import os, { EOL } from "os";
 import { Logger } from "../utils/log/info";
+import * as yauzl from "yauzl";
 
 /*
  * Global Variables
@@ -211,24 +212,55 @@ async function UpdateEvieClient() {
                             recursive: true,
                           }
                         );
-                        extract(
+
+                        yauzl.open(
                           `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
-                          `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5`,
-                          {
-                            $bin: pathTo7zip,
+                          { lazyEntries: true },
+                          function (err, zipfile) {
+                            if (err) throw err;
+                            zipfile.readEntry();
+                            zipfile.on("entry", function (entry) {
+                              if (/\/$/.test(entry.fileName)) {
+                                // Directory file names end with '/'.
+                                // Note that entries for directories themselves are optional.
+                                // An entry's fileName implicitly requires its parent directories to exist.
+                                zipfile.readEntry();
+                              } else {
+                                // file entry
+                                zipfile.openReadStream(
+                                  entry,
+                                  function (err, readStream) {
+                                    if (err) throw err;
+                                    readStream.on("end", function () {
+                                      zipfile.readEntry();
+                                    });
+                                    logger.info(`${entry.fileName}`);
+                                    if (
+                                      entry.fileName ===
+                                      "launchwrapper-of-2.2.jar"
+                                    ) {
+                                      readStream
+                                        .pipe(
+                                          fs.createWriteStream(
+                                            `${EvieClient}/temp/launchwrapper-of-2.2.jar`
+                                          )
+                                        )
+                                        .on("finish", async () => {
+                                          await fsPromises.rename(
+                                            `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
+                                            `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
+                                          );
+                                          return resolve();
+                                        });
+                                    } else {
+                                      zipfile.readEntry();
+                                    }
+                                  }
+                                );
+                              }
+                            });
                           }
-                        ).on("end", async () => {
-                          logger.launchStatus("Moving OptiFine...");
-                          await fsPromises.rename(
-                            `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5/launchwrapper-of-2.2.jar`,
-                            `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
-                          );
-                          await fsPromises.rename(
-                            `${EvieClient}/temp/OptiFine_1.8.9_HD_U_M5.jar`,
-                            `${EvieClient}/build/libraries/optifine/OptiFine/1.8.9_HD_U_M5/OptiFine-1.8.9_HD_U_M5.jar`
-                          );
-                          resolve();
-                        });
+                        );
                       })
                   );
                 });
@@ -281,8 +313,7 @@ async function PlayGame() {
   try {
     const opts: LaunchOption = {
       version: "Evie",
-      javaPath:
-        "/Users/tristan/Library/Application Support/minecraft/runtime/jre-legacy/mac-os/jre-legacy/jre.bundle/Contents/Home/bin/java",
+      javaPath: "C://Users/tjthe/AppData/Roaming/.evieclient/java/jre/java.exe",
       gamePath: `${EvieClient}/build`,
       gameProfile: account.profile,
       accessToken: account.accessToken,
@@ -303,13 +334,29 @@ async function PlayGame() {
     // console log the crash message
 
     (await proc).stderr?.on("data", (buf: any) => {
-      console.log(...buf.toString().split(EOL));
+      // console.log(...buf.toString().split(EOL)); if the log contains account.accessToken then replace it with [REDACTED]
+      console.log(
+        ...buf
+          .toString()
+          .replaceAll(account.accessToken, "[REDACTED]")
+          .split(EOL)
+      );
     });
     (await proc).stdout?.on("data", (buf: any) => {
-      console.log(...buf.toString().split(EOL));
+      console.log(
+        ...buf
+          .toString()
+          .replaceAll(account.accessToken, "[REDACTED]")
+          .split(EOL)
+      );
     });
     (await proc).stdin?.on("data", (buf: any) => {
-      console.log(...buf.toString().split(EOL));
+      console.log(
+        ...buf
+          .toString()
+          .replaceAll(account.accessToken, "[REDACTED]")
+          .split(EOL)
+      );
     });
 
     (await proc).on("exit", (err) => {

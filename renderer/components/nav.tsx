@@ -4,7 +4,7 @@ import { BellIcon, MenuIcon, XIcon } from "@heroicons/react/outline";
 import Link from "next/link";
 import React from "react";
 import electron from "electron";
-import News from "./News";
+import News from "./news";
 import About from "./About";
 import { UserInfo } from "../../types";
 import Skins from "./Skins";

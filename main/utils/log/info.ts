@@ -38,6 +38,6 @@ export class Logger {
         chalk.reset(),
       message
     );
-    mainWindow.webContents.send("launch-status", message);
+    mainWindow.webContents.send("launch-status", message.toString());
   }
 }

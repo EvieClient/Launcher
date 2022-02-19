@@ -1,10 +1,8 @@
 import axios, { AxiosResponse } from "axios";
 import { EvieClient } from "../handlers/launchGame";
 import fs from "fs";
-import os from "os";
+import * as yauzl from "yauzl";
 import crypto from "crypto";
-import sevenBin from "7zip-bin";
-import { extract } from "node-7z";
 import { Logger } from "./log/info";
 const fsPromises = fs.promises;
 
@@ -50,10 +48,36 @@ export default async function downloadArchive(
 
   await new Promise<void>((resolve, reject) => {
     logger.launchStatus("Extracting file...");
-    extract(tempFile, path, {
-      $bin: sevenBin.path7za,
-    }).on("end", () => {
-      resolve();
+    yauzl.open(tempFile, { lazyEntries: true }, (err, zipfile) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      zipfile.readEntry();
+      zipfile.on("entry", async (entry: yauzl.Entry) => {
+        if (/\/$/.test(entry.fileName)) {
+          // directory file names end with '/'
+          await fsPromises.mkdir(`${path}/${entry.fileName}`, {
+            recursive: true,
+          });
+          zipfile.readEntry();
+        } else {
+          // file entry
+          const file = fs.createWriteStream(`${path}/${entry.fileName}`);
+          zipfile.openReadStream(entry, (err, readStream) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+            readStream.pipe(file);
+          });
+          zipfile.readEntry();
+        }
+      });
+      zipfile.once("end", () => {
+        logger.launchStatus("Extraction complete.");
+        resolve();
+      });
     });
   });
   await new Promise<void>((resolve, reject) => {

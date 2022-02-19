@@ -2,16 +2,18 @@ import axios, { AxiosError } from "axios";
 import electron from "electron";
 import { mainWindow } from "../background";
 import Launch from "../handlers/launchGame";
+import fs from "fs";
 import {
   getAccountGameProfile,
   signInViaMicrosoft,
   signOut,
 } from "../handlers/userAuth";
+import { getLaunchOptions } from "../handlers/userOptions";
 
 const ipc = require("electron").ipcMain;
 
-ipc.on("launch-game", function (event, arg) {
-  Launch();
+ipc.on("launch-game", async function (event, arg) {
+  Launch((await getLaunchOptions()).autoJoinServerIp);
 });
 
 ipc.on("sign-in-via-microsoft", function (event, arg: boolean) {
@@ -45,6 +47,10 @@ ipc.on("fetch-user-info", async function (event, arg) {
       valid: false,
     });
   }
+});
+
+ipc.on("minimize-window", function (event, arg) {
+  mainWindow.minimize();
 });
 
 ipc.on("fetch-news", async function (event, arg) {

@@ -16,6 +16,7 @@ import { mainWindow } from "../background";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
 
 const logger = new Logger("userAuth");
+let currentSession: MicrosoftAccount | null = null;
 
 async function getAccountGameProfile(): Promise<{
   profile: GameProfile;
@@ -30,6 +31,15 @@ async function getAccountGameProfile(): Promise<{
       fs.readFileSync(`${EvieDir}/accountinfo.private`, "utf8")
     );
 
+    if (currentSession) {
+      logger.info(`Using cached session: ${currentSession.username}`);
+
+      await currentSession.getProfile();
+      return {
+        profile: currentSession.profile,
+        accessToken: currentSession.accessToken,
+      };
+    }
     logger.info(`Refreshing access token...`);
 
     const res = await axios.get(
@@ -64,6 +74,7 @@ async function getAccountGameProfile(): Promise<{
       id: account.uuid,
       name: account.username,
     };
+    currentSession = account;
     return {
       profile: profile,
       accessToken: account.accessToken,

@@ -3,3 +3,7 @@ export interface UserInfo {
   name?: string;
   valid?: boolean;
 }
+
+export interface LaunchOptions {
+  autoJoinServerIp?: string;
+}

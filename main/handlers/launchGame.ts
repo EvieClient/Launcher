@@ -1,7 +1,6 @@
 import { getVersionList, install, MinecraftVersion } from "@xmcl/installer";
 import { LaunchOption, launch } from "@xmcl/core";
 import sevenBin from "7zip-bin";
-import { extract } from "node-7z";
 import { app } from "electron";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
 import { ChildProcess } from "node:child_process";
@@ -10,7 +9,7 @@ const fsPromises = fs.promises;
 import axios, { AxiosError } from "axios";
 import { getAccountGameProfile } from "./userAuth";
 import InstallJava from "../utils/installJava";
-import os, { EOL } from "os";
+import { EOL } from "os";
 import { Logger } from "../utils/log/info";
 import * as yauzl from "yauzl";
 
@@ -23,31 +22,7 @@ export const EvieClient = `${app.getPath("appData")}/.evieclient`;
 const _Minecraft = `${app.getPath("appData")}/.minecraft`;
 export const javaLocation = `${app.getPath("appData")}/.evieclient/java/`;
 
-async function Launch() {
-  /*
-   * Check if Java is Installed
-   */
-  if (!fs.existsSync(`${javaLocation}/jre`)) {
-    logger.launchStatus("Java is not installed, installing...");
-    try {
-      await InstallJava();
-    } catch (error) {
-      logger.launchStatus(error);
-      return;
-    }
-  }
-  /*
-   * Check if .minecraft folder exists
-   */
-  if (!fs.existsSync(_Minecraft)) {
-    logger.launchStatus("Minecraft folder does not exist, creating...");
-    try {
-      await fsPromises.mkdir(_Minecraft, { recursive: true });
-    } catch (error) {
-      logger.launchStatus(error);
-      return;
-    }
-  }
+async function Launch(server?: string) {
   /*
    * Make sure vital folders exist
    */
@@ -79,6 +54,30 @@ async function Launch() {
     logger.launchStatus(error);
     return;
   }
+  /*
+   * Check if Java is Installed
+   */
+  if (!fs.existsSync(`${javaLocation}/jre`)) {
+    logger.launchStatus("Java is not installed, installing...");
+    try {
+      await InstallJava();
+    } catch (error) {
+      logger.launchStatus(error);
+      return;
+    }
+  }
+  /*
+   * Check if .minecraft folder exists
+   */
+  if (!fs.existsSync(_Minecraft)) {
+    logger.launchStatus("Minecraft folder does not exist, creating...");
+    try {
+      await fsPromises.mkdir(_Minecraft, { recursive: true });
+    } catch (error) {
+      logger.launchStatus(error);
+      return;
+    }
+  }
 
   /*
    * Update/Verify EvieClient
@@ -87,7 +86,7 @@ async function Launch() {
   await UpdateEvieClient();
 
   logger.launchStatus("Game is installed, launching...");
-  PlayGame();
+  PlayGame(server);
 }
 
 async function UpdateEvieClient() {
@@ -147,7 +146,7 @@ async function UpdateEvieClient() {
             logger.launchStatus("OptiFine is not installed, installing...");
           } else {
             logger.launchStatus("OptiFine is installed, skipping...");
-            //return; //TODO: Fix the bug where the game doesn't launch if I don't update OptiFine every launch...
+            // return resolve(); //TODO: Fix the bug where the game doesn't launch if I don't update OptiFine every launch...
           }
 
           /*
@@ -242,7 +241,7 @@ async function UpdateEvieClient() {
                                       readStream
                                         .pipe(
                                           fs.createWriteStream(
-                                            `${EvieClient}/temp/launchwrapper-of-2.2.jar`
+                                            `${EvieClient}/build/libraries/optifine/launchwrapper-of/2.2/launchwrapper-of-2.2.jar`
                                           )
                                         )
                                         .on("finish", async () => {
@@ -281,7 +280,7 @@ async function UpdateEvieClient() {
   }
 }
 
-async function PlayGame() {
+async function PlayGame(server?: string) {
   logger.launchStatus("Fetching Account...");
   const account = await getAccountGameProfile();
   // install 1.8.9
@@ -313,12 +312,13 @@ async function PlayGame() {
   try {
     const opts: LaunchOption = {
       version: "Evie",
-      javaPath: "C://Users/tjthe/AppData/Roaming/.evieclient/java/jre/java.exe",
+      javaPath: `${EvieClient}/java/jre/jdk8u322-b06-jre/bin/java.exe`,
       gamePath: `${EvieClient}/build`,
       gameProfile: account.profile,
       accessToken: account.accessToken,
       // minMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
       // maxMemory: (os.freemem() / 1024 / 1024 / 2.5) | 0,
+
       extraExecOption: {
         detached: true,
       },
@@ -327,9 +327,15 @@ async function PlayGame() {
           " "
         ),
     };
+
+    if (server != null) {
+      opts.server = { ip: server };
+    }
+
     const proc: Promise<ChildProcess> = launch(opts);
     proc.then((child) => {
       logger.launchStatus("Game Launched");
+      app.quit();
     });
     // console log the crash message
 

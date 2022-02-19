@@ -21,6 +21,7 @@ if (isProd) {
     width: 1312,
     height: 806,
     resizable: false,
+    frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,

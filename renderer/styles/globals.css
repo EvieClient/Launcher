@@ -1,4 +1,3 @@
-@import "bulma/css/bulma.css";
 @tailwind base;
 
 /* Write your own custom base styles here */
@@ -24,6 +23,14 @@ body {
 /* Write your own custom component styles here */
 .btn-blue {
   @apply px-4 py-2 font-bold text-white bg-blue-500 rounded hover:bg-blue-600;
+}
+
+.drag {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
 }
 
 ::-webkit-scrollbar {

@@ -11,7 +11,7 @@ function Home() {
         <div>
           <Nav setCurrentTab={setCurrentTab} currentTab={currentTab} />
         </div>
-        <main className="page lanidng-page">
+        <main>
           <Launch />
         </main>
         <br />

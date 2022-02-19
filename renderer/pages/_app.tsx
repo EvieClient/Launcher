@@ -6,6 +6,7 @@ import Head from "next/head";
 import TransitionLayout from "../components/Layout";
 import electron from "electron";
 import { useRouter } from "next/router";
+import WindowFrame from "../components/WindowFrame";
 
 function MyApp({ Component, pageProps }: AppProps) {
   const ipcRenderer = electron.ipcRenderer;
@@ -20,6 +21,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         <Head>
           <title>Evie Client</title>
         </Head>
+        <WindowFrame />
         <Component {...pageProps} />
       </TransitionLayout>
     </React.Fragment>

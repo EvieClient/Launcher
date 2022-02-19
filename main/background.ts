@@ -21,6 +21,7 @@ if (isProd) {
     width: 1312,
     height: 806,
     resizable: false,
+    frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
@@ -28,10 +29,10 @@ if (isProd) {
   });
 
   if (isProd) {
-    await mainWindow.loadURL("app://./home.html");
+    await mainWindow.loadURL("app://./index.html");
   } else {
     const port = process.argv[2];
-    await mainWindow.loadURL(`http://localhost:${port}/home`);
+    await mainWindow.loadURL(`http://localhost:${port}/`);
     // mainWindow.webContents.openDevTools();
   }
   onStart();

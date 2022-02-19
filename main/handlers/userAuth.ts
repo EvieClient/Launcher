@@ -1,5 +1,6 @@
 import electron, { app } from "electron";
 import {
+  account,
   Account,
   MicrosoftAccount,
   MicrosoftAuth,
@@ -10,40 +11,17 @@ import { GameProfile } from "@xmcl/user";
 import { createWindow } from "../helpers";
 import { bgExpressServer } from "../utils/bgExpressServer";
 import { Logger } from "../utils/log/info";
+import axios from "axios";
+import { mainWindow } from "../background";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
 
 const logger = new Logger("userAuth");
+let currentSession: MicrosoftAccount | null = null;
 
-async function signInViaMojang(username: string, password: string) {
-  const account = new MojangAccount();
-  try {
-    await account.Login(username, password);
-    await account.getProfile();
-    logger.info(`Storing new account token for ${account.username}`);
-    await storeAccountToken(account);
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
-  return account;
-}
-
-async function getAccountToken(): Promise<string | null> {
-  // get the account token from the EvieDir with a file names accountinfo.private
-  // this is a json file that contains the account token
-  // the account token is used to authenticate with the minecraft server
-  let accountToken = "";
-  if (fs.existsSync(`${EvieDir}/accountinfo.private`)) {
-    accountToken = JSON.parse(
-      fs.readFileSync(`${EvieDir}/accountinfo.private`, "utf8")
-    ).token;
-  } else {
-    throw new Error("No account token found! Please sign in, Piracy is Crime");
-  }
-  return accountToken;
-}
-
-async function getAccountGameProfile(): Promise<GameProfile | null> {
+async function getAccountGameProfile(): Promise<{
+  profile: GameProfile;
+  accessToken: string;
+} | null> {
   // get the account token from the EvieDir with a file names accountinfo.private
   // this is a json file that contains the account token
   // the account token is used to authenticate with the minecraft server
@@ -53,17 +31,60 @@ async function getAccountGameProfile(): Promise<GameProfile | null> {
       fs.readFileSync(`${EvieDir}/accountinfo.private`, "utf8")
     );
 
+    if (currentSession) {
+      logger.info(`Using cached session: ${currentSession.username}`);
+
+      await currentSession.getProfile();
+      return {
+        profile: currentSession.profile,
+        accessToken: currentSession.accessToken,
+      };
+    }
+    logger.info(`Refreshing access token...`);
+
+    const res = await axios.get(
+      `https://evie.pw/api/auth/refreshToken?refresh=${json.refreshToken}&access=${json.accessToken}`
+    );
+
+    logger.info(`Refreshed access token!`);
+    const data = res.data;
+    fs.writeFileSync(`${EvieDir}/accountinfo.private`, JSON.stringify(data));
+
+    let appID = "79d63740-a433-4f6d-8c3d-19f997d868b8";
+    let redirectURL = "http://localhost:9998/auth/microsoft";
+
+    MicrosoftAuth.setup(appID, null, redirectURL);
+
+    const account = new MicrosoftAccount();
+
+    account.accessToken = data.accessToken;
+    account.refreshToken = data.refreshToken;
+    account.username = data.username;
+    account.uuid = data.uuid;
+    logger.info(`Got profile for ${account.username}(${account.uuid})!`);
+
+    if (await account.checkValidToken()) {
+      logger.info("Valid token");
+    } else {
+      logger.info("Invalid token");
+      throw new Error("Account Token Invalid!");
+    }
+
     const profile: GameProfile = {
-      id: json.id,
-      name: json.name,
+      id: account.uuid,
+      name: account.username,
     };
-    return profile;
+    currentSession = account;
+    return {
+      profile: profile,
+      accessToken: account.accessToken,
+    };
   } else {
     throw new Error("No account token found!");
   }
 }
 
-async function storeAccountToken(account: Account) {
+async function storeAccountToken(account: MicrosoftAccount) {
   // store the account token in the EvieDir with a file names accountinfo.private
   // this is a json file that contains the account token
   // the account token is used to authenticate with the minecraft server
@@ -79,9 +100,17 @@ async function storeAccountToken(account: Account) {
     fs.writeFileSync(
       `${EvieDir}/accountinfo.private`,
       JSON.stringify({
-        token: account.accessToken,
-        id: account.uuid,
-        name: account.username,
+        accessToken: account.accessToken,
+        refreshToken: account.refreshToken,
+      })
+    );
+  } else {
+    // replace the accountinfo.private file with the new account token
+    fs.writeFileSync(
+      `${EvieDir}/accountinfo.private`,
+      JSON.stringify({
+        accessToken: account.accessToken,
+        refreshToken: account.refreshToken,
       })
     );
   }
@@ -91,10 +120,9 @@ async function signInViaMicrosoft(integratedWindow: boolean) {
   const account = new MicrosoftAccount();
   try {
     let appID = "79d63740-a433-4f6d-8c3d-19f997d868b8";
-    let appSecret = "ymc7Q~uH~ljrgOarWbn2eUFrlueW1txTE6rTx";
     let redirectURL = "http://localhost:9998/auth/microsoft";
 
-    MicrosoftAuth.setup(appID, appSecret, redirectURL);
+    MicrosoftAuth.setup(appID, null, redirectURL);
 
     if (integratedWindow) {
       let authwindow = createWindow("main", {
@@ -115,21 +143,32 @@ async function signInViaMicrosoft(integratedWindow: boolean) {
         resolve(code);
       });
     });
-    await account.authFlow(code);
-    await account.getProfile();
-    logger.info(`Storing new account token for ${account.username}`);
-    await storeAccountToken(account);
+
+    await axios
+      .get(`https://evie.pw/api/auth/processCode?code=${code}`)
+      .then((response) => {
+        if (response.status === 200) {
+          account.accessToken = response.data.access_token;
+          account.refreshToken = response.data.refresh_token;
+          account.username = response.data.username;
+          account.uuid = response.data.user_id;
+          storeAccountToken(account);
+        } else {
+          throw new Error("Failed to process code!");
+        }
+      });
+
+    logger.info(`${account.username} signed in!`);
+    mainWindow.webContents.send("go-home");
   } catch (e) {
     console.error(e);
   }
 }
 
-async function signOut() {}
+async function signOut() {
+  if (fs.existsSync(`${EvieDir}/accountinfo.private`)) {
+    await fs.promises.unlink(`${EvieDir}/accountinfo.private`);
+  }
+}
 
-export {
-  signInViaMojang,
-  signInViaMicrosoft,
-  signOut,
-  getAccountToken,
-  getAccountGameProfile,
-};
+export { signInViaMicrosoft, signOut, getAccountGameProfile };

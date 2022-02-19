@@ -2,16 +2,50 @@ import { Fragment } from "react";
 import { Disclosure, Menu, Transition } from "@headlessui/react";
 import { BellIcon, MenuIcon, XIcon } from "@heroicons/react/outline";
 import Link from "next/link";
+import React from "react";
+import electron from "electron";
+import News from "./News";
+import About from "./About";
+import { UserInfo } from "../../types";
+import Skins from "./Skins";
+import Cosmetics from "./Cosmetics";
+import Staff from "./Staff";
 const navigation = [
-  { name: "Home", href: "/home", current: true },
-  { name: "Servers", href: "#", current: false },
-  { name: "Store", href: "#", current: false },
+  { name: "Home", component: <News /> },
+  { name: "Cosmetics", component: <Cosmetics /> },
+  { name: "Skins", component: <Skins /> },
+  { name: "About", component: <About /> },
 ];
 
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
-function Nav() {
+function Nav(props: {
+  setCurrentTab: React.Dispatch<React.SetStateAction<JSX.Element>>;
+  currentTab: React.ReactNode;
+}) {
+  const [userInfo, setUserInfo] = React.useState<UserInfo>(null);
+  const ipcRenderer = electron.ipcRenderer;
+
+  ipcRenderer?.on("fetch-user-info-reply", (event, userInfo: UserInfo) => {
+    setUserInfo(userInfo);
+  });
+
+  React.useEffect(() => {
+    props.setCurrentTab(<News />);
+    ipcRenderer.send("fetch-user-info");
+    if (userInfo != null) {
+      if (userInfo.valid) {
+        if (userInfo.name == "twisttaan") {
+          navigation.push({
+            name: "Staff",
+            component: <Staff />,
+          });
+        }
+      }
+    }
+  }, [userInfo?.name]);
+
   return (
     <Disclosure as="nav" className="bg-gray-800">
       {({ open }) => (
@@ -38,14 +72,16 @@ function Nav() {
                     {navigation.map((item) => (
                       <a
                         key={item.name}
-                        href={item.href}
+                        onClick={(e) => {
+                          console.log(`Changing Tab to ${item.component}`);
+                          props.setCurrentTab(item.component);
+                        }}
                         className={classNames(
-                          item.current
+                          props.currentTab == item.component
                             ? "bg-gray-900 text-white"
                             : "text-gray-300 hover:bg-gray-700 hover:text-white",
                           "px-3 py-2 rounded-md text-sm font-medium"
                         )}
-                        aria-current={item.current ? "page" : undefined}
                       >
                         {item.name}
                       </a>
@@ -69,7 +105,11 @@ function Nav() {
                       <span className="sr-only">Open user menu</span>
                       <img
                         className="h-8 w-8 rounded-full"
-                        src="https://crafatar.com/avatars/f5e658ea-fe2a-4ea7-8df1-d5c08af78a69"
+                        src={`https://crafatar.com/avatars/${
+                          userInfo
+                            ? userInfo.id
+                            : "8667ba71-b85a-4004-af54-457a9734eed7"
+                        }?overlay`}
                         alt=""
                       />
                     </Menu.Button>
@@ -86,34 +126,12 @@ function Nav() {
                     <Menu.Items className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none">
                       <Menu.Item>
                         {({ active }) => (
-                          <a
-                            href="#"
-                            className={classNames(
-                              active ? "bg-gray-100" : "",
-                              "block px-4 py-2 text-sm text-gray-700"
-                            )}
-                          >
-                            TSMP Stats
-                          </a>
-                        )}
-                      </Menu.Item>
-                      <Menu.Item>
-                        {({ active }) => (
-                          <a
-                            href="#"
-                            className={classNames(
-                              active ? "bg-gray-100" : "",
-                              "block px-4 py-2 text-sm text-gray-700"
-                            )}
-                          >
-                            Skins
-                          </a>
-                        )}
-                      </Menu.Item>
-                      <Menu.Item>
-                        {({ active }) => (
                           <Link href="/login">
                             <a
+                              onClick={() => {
+                                const ipcRenderer = electron.ipcRenderer;
+                                ipcRenderer.send("sign-out");
+                              }}
                               className={classNames(
                                 active ? "bg-gray-100" : "",
                                 "block px-4 py-2 text-sm text-gray-700"
@@ -137,14 +155,19 @@ function Nav() {
                 <Disclosure.Button
                   key={item.name}
                   as="a"
-                  href={item.href}
+                  onClick={(e) => {
+                    console.log(`Changing Tab to ${item.component}`);
+                    props.setCurrentTab(item.component);
+                  }}
                   className={classNames(
-                    item.current
+                    props.currentTab == item.component
                       ? "bg-gray-900 text-white"
                       : "text-gray-300 hover:bg-gray-700 hover:text-white",
                     "block px-3 py-2 rounded-md text-base font-medium"
                   )}
-                  aria-current={item.current ? "page" : undefined}
+                  aria-current={
+                    props.currentTab == item.component ? "page" : undefined
+                  }
                 >
                   {item.name}
                 </Disclosure.Button>

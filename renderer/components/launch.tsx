@@ -8,7 +8,7 @@ function Launch() {
   });
 
   return (
-    <section className="p-36 bg-[url('https://untitledmc.net/assets/img/clipboard-image.png')]  bg-center">
+    <section className="p-36 bg-[url('/images/puryan.png')]  bg-center">
       <div className="flex flex-col items-center justify-center">
         <a
           onClick={() => {

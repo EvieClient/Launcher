@@ -1,7 +1,9 @@
 import "./ipc";
 import "./app";
-import { Logger } from "../utils/log/info";
+import { mainWindow } from "../background";
 
-async function onStart() {}
+async function onStart() {
+  mainWindow.setSize(1312, 806);
+}
 
 export { onStart };

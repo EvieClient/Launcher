@@ -1,17 +1,17 @@
-import { getVersionList, install, MinecraftVersion } from "@xmcl/installer";
-import { LaunchOption, launch } from "@xmcl/core";
 import sevenBin from "7zip-bin";
+import { launch, LaunchOption } from "@xmcl/core";
+import { getVersionList, install, MinecraftVersion } from "@xmcl/installer";
+import axios, { AxiosError } from "axios";
 import { app } from "electron";
 import { getDownloadURL, getStorage, ref } from "firebase/storage";
-import { ChildProcess } from "node:child_process";
 import fs from "fs";
-const fsPromises = fs.promises;
-import axios, { AxiosError } from "axios";
-import { getAccountGameProfile } from "./userAuth";
-import InstallJava from "../utils/installJava";
+import { ChildProcess } from "node:child_process";
 import { EOL } from "os";
-import { Logger } from "../utils/log/info";
 import * as yauzl from "yauzl";
+import InstallJava from "../utils/installJava";
+import { Logger } from "../utils/log/info";
+import { getAccountGameProfile } from "./userAuth";
+const fsPromises = fs.promises;
 
 /*
  * Global Variables
@@ -302,7 +302,7 @@ async function PlayGame(server?: string) {
   logger.launchStatus("It exists now, I think");
   logger.launchStatus("Updating EvieClient launch script...");
   const launcherJson = await axios
-    .get("https://evie.pw/api/getLauncherJson")
+    .get("https://huntrissus.evie.pw/api/getLauncherJson")
     .then((response) => response.data);
   await fsPromises.writeFile(
     `${EvieClient}/build/versions/Evie/Evie.json`,

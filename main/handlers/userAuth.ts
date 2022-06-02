@@ -1,18 +1,12 @@
-import electron, { app } from "electron";
-import {
-  account,
-  Account,
-  MicrosoftAccount,
-  MicrosoftAuth,
-  MojangAccount,
-} from "minecraft-auth";
-import * as fs from "fs";
 import { GameProfile } from "@xmcl/user";
+import axios from "axios";
+import electron, { app } from "electron";
+import * as fs from "fs";
+import { MicrosoftAccount, MicrosoftAuth } from "minecraft-auth";
+import { mainWindow } from "../background";
 import { createWindow } from "../helpers";
 import { bgExpressServer } from "../utils/bgExpressServer";
 import { Logger } from "../utils/log/info";
-import axios from "axios";
-import { mainWindow } from "../background";
 const EvieDir = `${app.getPath("appData")}/.evieclient`;
 
 const logger = new Logger("userAuth");
@@ -43,7 +37,7 @@ async function getAccountGameProfile(): Promise<{
     logger.info(`Refreshing access token...`);
 
     const res = await axios.get(
-      `https://evie.pw/api/auth/refreshToken?refresh=${json.refreshToken}&access=${json.accessToken}`
+      `https://huntrissus.evie.pw/api/auth/refreshToken?refresh=${json.refreshToken}&access=${json.accessToken}`
     );
 
     logger.info(`Refreshed access token!`);
@@ -145,7 +139,7 @@ async function signInViaMicrosoft(integratedWindow: boolean) {
     });
 
     await axios
-      .get(`https://evie.pw/api/auth/processCode?code=${code}`)
+      .get(`https://huntrissus.evie.pw/api/auth/processCode?code=${code}`)
       .then((response) => {
         if (response.status === 200) {
           account.accessToken = response.data.access_token;

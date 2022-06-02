@@ -2,7 +2,6 @@ import axios, { AxiosError } from "axios";
 import electron from "electron";
 import { mainWindow } from "../background";
 import Launch from "../handlers/launchGame";
-import fs from "fs";
 import {
   getAccountGameProfile,
   signInViaMicrosoft,
@@ -55,7 +54,7 @@ ipc.on("minimize-window", function (event, arg) {
 
 ipc.on("fetch-news", async function (event, arg) {
   await axios
-    .get("https://evie.pw/api/getNews")
+    .get("https://huntrissus.evie.pw/api/getNews")
     .then((response) => {
       const posts: Post[] = response.data;
       mainWindow.webContents.send("fetch-news-reply", posts);
